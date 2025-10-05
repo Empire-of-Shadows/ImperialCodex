@@ -2,6 +2,8 @@
 Welcome to the official repository for the Empire of Shadows Discord bot! We believe in **transparency**, so we've made our bot's code public for all community members to view.
 This open approach allows you to see how the bot functions and helps us build trust.
 
+
+
 ### What it does
 Our bot helps you explore the server, track your activity, create beautiful announcement cards, share suggestions — all with easy buttons and friendly menus.
 
