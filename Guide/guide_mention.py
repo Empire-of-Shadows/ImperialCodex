@@ -10,6 +10,8 @@ from utils.logger import get_logger
 
 logger = get_logger("GuideMentionListener")
 
+# Todo - Remove hard coded values
+
 class HelpListener(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot

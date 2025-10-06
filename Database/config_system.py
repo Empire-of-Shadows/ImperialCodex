@@ -3,6 +3,7 @@ import os
 import time
 from typing import Any, Dict, List, Set, Type, Optional
 from dataclasses import dataclass
+from dotenv import load_dotenv
 
 from Database.sub_systems.settings_define import SettingsDefine, ConfigDefinition
 from Database.sub_systems.settings_update import SettingsUpdate
@@ -10,6 +11,9 @@ from Database.sub_systems.settings_validate import SettingsValidater
 from utils.logger import get_logger
 import yaml
 
+load_dotenv()
+
+config_dir = os.getenv("CONFIG_DIR")
 # Initialize logger for this module
 logger = get_logger("config_system")
 
@@ -33,7 +37,7 @@ def format_value_for_logging(value: Any, max_single_line: int = 80) -> str:
     return f" {value}"
 
 class BotConfig(SettingsValidater, SettingsDefine, SettingsUpdate):
-    def __init__(self, config_path: str = "Database/config"):
+    def __init__(self, config_path: str = config_dir):
         logger.info(f"Initializing BotConfig with path: {config_path}")
         self.config_path = config_path
         self._config_definitions: Dict[str, ConfigDefinition] = {}
