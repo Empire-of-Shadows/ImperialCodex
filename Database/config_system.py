@@ -1,7 +1,12 @@
 import json
 import os
-from typing import Any, Dict, List, Set, Type
+import time
+from typing import Any, Dict, List, Set, Type, Optional
 from dataclasses import dataclass
+
+from Database.sub_systems.settings_define import SettingsDefine, ConfigDefinition
+from Database.sub_systems.settings_update import SettingsUpdate
+from Database.sub_systems.settings_validate import SettingsValidater
 from utils.logger import get_logger
 import yaml
 
@@ -27,16 +32,7 @@ def format_value_for_logging(value: Any, max_single_line: int = 80) -> str:
 
     return f" {value}"
 
-@dataclass
-class ConfigDefinition:
-    name: str
-    type: Type
-    default: Any
-    description: str = ""
-    validator: callable = None
-
-
-class BotConfig:
+class BotConfig(SettingsValidater, SettingsDefine, SettingsUpdate):
     def __init__(self, config_path: str = "Database/config"):
         logger.info(f"Initializing BotConfig with path: {config_path}")
         self.config_path = config_path
@@ -54,151 +50,6 @@ class BotConfig:
         self._define_settings()
         self.load_config()
         logger.info("BotConfig initialization completed successfully")
-
-    def _define_settings(self):
-        """Define all config settings with clean defaults"""
-        logger.debug("Defining configuration settings")
-
-        # Role to Tier Mapping
-        self._config_definitions["role_to_tier_mapping"] = ConfigDefinition(
-            name="role_to_tier_mapping",
-            type=Dict[str, List[str]],
-            default={},  # Empty by default - will be populated from config file
-            description="Maps role IDs to tier sets for feature access. Format: {'role_id': ['tier_1', 'tier_2']}",
-            validator=self._validate_role_tier_mapping
-        )
-
-        # Role Description Limits
-        self._config_definitions["role_description_limits"] = ConfigDefinition(
-            name="role_description_limits",
-            type=Dict[str, int],
-            default={},  # Empty by default
-            description="Character limits for descriptions per role. Format: {'role_id': 1000}",
-            validator=self._validate_role_limits
-        )
-
-        # Color Tiers
-        self._config_definitions["color_tiers"] = ConfigDefinition(
-            name="color_tiers",
-            type=Dict[str, Dict[str, int]],
-            default={
-                "tier_1": {},
-                "tier_2": {},
-                "tier_3": {},
-                "tier_4": {}
-            },
-            description="Available colors for each tier. Format: {'tier_name': {'color_name': hex_code}}",
-            validator=self._validate_color_tiers
-        )
-
-        # Default Description Limit
-        self._config_definitions["default_description_limit"] = ConfigDefinition(
-            name="default_description_limit",
-            type=int,
-            default=500,
-            description="Default character limit when no role-specific limit is set",
-            validator=lambda x: isinstance(x, int) and 1 <= x <= 4000
-        )
-
-        # Feature Access
-        self._config_definitions["feature_access"] = ConfigDefinition(
-            name="feature_access",
-            type=Dict[str, List[str]],
-            default={
-                "basic_embed": [],
-                "image_field": [],
-                "advanced_embed": []
-            },
-            description="Which roles can access which features. Format: {'feature_name': ['role_id1', 'role_id2']}",
-            validator=self._validate_feature_access
-        )
-
-        logger.debug(f"Defined {len(self._config_definitions)} configuration settings")
-
-    def _validate_role_tier_mapping(self, value: Any) -> bool:
-        """Validate role to tier mapping"""
-        if not isinstance(value, dict):
-            logger.warning("Role tier mapping validation failed: not a dict")
-            return False
-        for role_id, tiers in value.items():
-            if not (isinstance(role_id, str) and role_id.isdigit()):
-                logger.warning(f"Role tier mapping validation failed: invalid role_id '{role_id}'")
-                return False
-            if not (isinstance(tiers, list) and all(isinstance(t, str) for t in tiers)):
-                logger.warning(f"Role tier mapping validation failed: invalid tiers for role_id '{role_id}'")
-                return False
-        logger.debug("Role tier mapping validation passed")
-        return True
-
-    def _validate_role_limits(self, value: Any) -> bool:
-        """Validate role description limits"""
-        if not isinstance(value, dict):
-            logger.warning("Role limits validation failed: not a dict")
-            return False
-        for role_id, limit in value.items():
-            if not (isinstance(role_id, str) and role_id.isdigit()):
-                logger.warning(f"Role limits validation failed: invalid role_id '{role_id}'")
-                return False
-            if not (isinstance(limit, int) and 1 <= limit <= 4000):
-                logger.warning(f"Role limits validation failed: invalid limit {limit} for role_id '{role_id}'")
-                return False
-        logger.debug("Role limits validation passed")
-        return True
-
-    def _validate_color_tiers(self, value: Any) -> bool:
-        """Validate color tiers configuration with hex strings"""
-        if not isinstance(value, dict):
-            logger.warning("Color tiers validation failed: not a dict")
-            return False
-
-        for tier_name, colors in value.items():
-            if not isinstance(tier_name, str):
-                logger.warning(f"Color tiers validation failed: invalid tier_name type")
-                return False
-            if not isinstance(colors, dict):
-                logger.warning(f"Color tiers validation failed: colors for '{tier_name}' not a dict")
-                return False
-            for color_name, hex_value in colors.items():
-                if not isinstance(color_name, str):
-                    logger.warning(f"Color tiers validation failed: invalid color_name in '{tier_name}'")
-                    return False
-                # Allow both int and string formats
-                if isinstance(hex_value, int):
-                    if not (0 <= hex_value <= 0xFFFFFF):
-                        logger.warning(
-                            f"Color tiers validation failed: hex value {hex_value} out of range in '{tier_name}'")
-                        return False
-                elif isinstance(hex_value, str):
-                    if not (hex_value.startswith('#') and len(hex_value) == 7):
-                        logger.warning(
-                            f"Color tiers validation failed: invalid hex string '{hex_value}' in '{tier_name}'")
-                        return False
-                    try:
-                        int(hex_value[1:], 16)
-                    except ValueError:
-                        logger.warning(
-                            f"Color tiers validation failed: invalid hex value '{hex_value}' in '{tier_name}'")
-                        return False
-                else:
-                    logger.warning(f"Color tiers validation failed: invalid hex_value type in '{tier_name}'")
-                    return False
-        logger.debug("Color tiers validation passed")
-        return True
-
-    def _validate_feature_access(self, value: Any) -> bool:
-        """Validate feature access configuration"""
-        if not isinstance(value, dict):
-            logger.warning("Feature access validation failed: not a dict")
-            return False
-        for feature_name, role_ids in value.items():
-            if not isinstance(feature_name, str):
-                logger.warning(f"Feature access validation failed: invalid feature_name type")
-                return False
-            if not (isinstance(role_ids, list) and all(isinstance(r, str) and r.isdigit() for r in role_ids)):
-                logger.warning(f"Feature access validation failed: invalid role_ids for feature '{feature_name}'")
-                return False
-        logger.debug("Feature access validation passed")
-        return True
 
     def _load_file(self, file_path: str) -> Dict[str, Any]:
         """Load a single configuration file (JSON or YAML/YML)"""
@@ -337,38 +188,6 @@ class BotConfig:
             logger.error(f"Error loading configuration: {e}", exc_info=True)
             raise
 
-    def _validate_and_load(self, config_dict: Dict[str, Any]):
-        """Validate and load configuration"""
-        logger.debug("Validating configuration data")
-        errors = []
-
-        for key, definition in self._config_definitions.items():
-            if key not in config_dict:
-                if definition.default is not None:
-                    self._values[key] = definition.default
-                    logger.debug(f"Using default value for missing config key: {key}")
-                else:
-                    error_msg = f"Missing required config: {key}"
-                    errors.append(error_msg)
-                    logger.error(error_msg)
-                continue
-
-            value = config_dict[key]
-            if definition.validator and not definition.validator(value):
-                error_msg = f"Invalid value for {key}: {value}"
-                errors.append(error_msg)
-                logger.error(error_msg)
-            else:
-                self._values[key] = value
-                logger.debug(f"Loaded config value for: {key}")
-
-        if errors:
-            error_summary = f"Config validation errors:\n" + "\n".join(errors)
-            logger.error(error_summary)
-            raise ValueError(error_summary)
-
-        logger.info(f"Successfully validated and loaded {len(self._values)} configuration values")
-
     def _create_default_config(self):
         """Create default config file"""
         logger.info("Creating default configuration")
@@ -378,22 +197,6 @@ class BotConfig:
             logger.info(f"Default configuration created successfully at: {self.config_path}")
         except Exception as e:
             logger.error(f"Failed to create default configuration: {e}", exc_info=True)
-            raise
-
-    def save_config(self):
-        """Save current configuration to file"""
-        logger.info(f"Saving configuration to: {self.config_path}")
-        try:
-            # Only save to file paths, not directories
-            if os.path.isdir(self.config_path):
-                logger.warning(f"Cannot save to directory path: {self.config_path}. Skipping save operation.")
-                return
-
-            with open(self.config_path, 'w', encoding='utf-8') as f:
-                json.dump(self._values, f, indent=2, ensure_ascii=False)
-            logger.debug(f"Configuration saved successfully with {len(self._values)} values")
-        except Exception as e:
-            logger.error(f"Failed to save configuration: {e}", exc_info=True)
             raise
 
     # Property accessors for easy usage
@@ -412,6 +215,16 @@ class BotConfig:
         result = {int(role_id): limit for role_id, limit in raw.items()}
         logger.debug(f"Retrieved role_description_limits with {len(result)} entries")
         return result
+
+    @property
+    def max_cache_entries(self) -> int:
+        """Get maximum cache entries"""
+        return self._values.get("max_cache_entries", 1000)
+
+    @property
+    def cache_duration(self) -> int:
+        """Get cache duration in seconds"""
+        return self._values.get("cache_duration", 3600)
 
     @property
     def color_tiers(self) -> Dict[str, Dict[str, int]]:
@@ -442,63 +255,43 @@ class BotConfig:
         logger.debug(f"Retrieved feature_access with {len(result)} features")
         return result
 
-    # Methods to modify config
-    def update_role_tier(self, role_id: int, tiers: Set[str]):
-        """Update tier mapping for a role"""
-        logger.info(f"Updating role tier for role_id {role_id} with tiers: {tiers}")
-        try:
-            current = self._values.get("role_to_tier_mapping", {})
-            current[str(role_id)] = list(tiers)
-            self._values["role_to_tier_mapping"] = current
-            self.save_config()
-            self._notify_callbacks()
-            logger.info(f"Successfully updated role tier for role_id {role_id}")
-        except Exception as e:
-            logger.error(f"Failed to update role tier for role_id {role_id}: {e}", exc_info=True)
-            raise
+    """
+    ```yaml
+    # Channel the suggestions will be sent to
+    suggestion_channel_id: 1371239792888516719
 
-    def update_role_limit(self, role_id: int, limit: int):
-        """Update description limit for a role"""
-        capped_limit = min(limit, 4000)
-        logger.info(f"Updating role limit for role_id {role_id}: {limit} (capped: {capped_limit})")
-        try:
-            current = self._values.get("role_description_limits", {})
-            current[str(role_id)] = capped_limit
-            self._values["role_description_limits"] = current
-            self.save_config()
-            self._notify_callbacks()
-            logger.info(f"Successfully updated role limit for role_id {role_id}")
-        except Exception as e:
-            logger.error(f"Failed to update role limit for role_id {role_id}: {e}", exc_info=True)
-            raise
+    # Channel to get a copy of the suggestions
+    admin_channel_id: 1265125349772230787
+    ```
+    """
 
-    def update_tier_colors(self, tier: str, colors: Dict[str, int]):
-        """Update colors for a specific tier"""
-        logger.info(f"Updating colors for tier '{tier}' with {len(colors)} colors")
-        try:
-            current = self._values.get("color_tiers", {})
-            current[tier] = colors
-            self._values["color_tiers"] = current
-            self.save_config()
-            self._notify_callbacks()
-            logger.info(f"Successfully updated colors for tier '{tier}'")
-        except Exception as e:
-            logger.error(f"Failed to update colors for tier '{tier}': {e}", exc_info=True)
-            raise
+    @property
+    def suggestion_channel_id(self) -> Optional[int]:
+        """Get suggestion channel ID"""
+        return self._values.get("suggestion_channel_id")
 
-    def update_feature_roles(self, feature: str, role_ids: Set[int]):
-        """Update which roles have access to a feature"""
-        logger.info(f"Updating feature access for '{feature}' with {len(role_ids)} roles")
-        try:
-            current = self._values.get("feature_access", {})
-            current[feature] = [str(rid) for rid in role_ids]
-            self._values["feature_access"] = current
-            self.save_config()
-            self._notify_callbacks()
-            logger.info(f"Successfully updated feature access for '{feature}'")
-        except Exception as e:
-            logger.error(f"Failed to update feature access for '{feature}': {e}", exc_info=True)
-            raise
+    @property
+    def admin_channel_id(self) -> Optional[int]:
+        """Get admin channel ID"""
+        return self._values.get("admin_channel_id")
+
+    @property
+    def channel_names(self) -> Dict[int, str]:
+        """Get channel ID to name mapping"""
+        raw = self._values.get("channel_names", {})
+        return {int(channel_id): name for channel_id, name in raw.items()}
+
+    def get_channel_name(self, channel_id: int) -> Optional[str]:
+        """Get stored name for a channel ID"""
+        return self.channel_names.get(channel_id)
+
+    def get_suggestion_channel_id(self) -> Optional[int]:
+        """Get suggestion channel ID (convenience method)"""
+        return self.suggestion_channel_id
+
+    def get_admin_channel_id(self) -> Optional[int]:
+        """Get admin channel ID (convenience method)"""
+        return self.admin_channel_id
 
     def get_description_limit_for_role(self, role_id: int) -> int:
         """Get the description limit for a specific role"""
@@ -538,15 +331,6 @@ class BotConfig:
         self._callbacks.append(callback)
         logger.debug(f"Added callback: {callback.__name__}. Total callbacks: {len(self._callbacks)}")
 
-    def _notify_callbacks(self):
-        """Notify all callbacks of config changes"""
-        logger.debug(f"Notifying {len(self._callbacks)} callbacks of config changes")
-        for callback in self._callbacks:
-            try:
-                callback(self._values)
-                logger.debug(f"Successfully executed callback: {callback.__name__}")
-            except Exception as e:
-                logger.error(f"Error in config callback {callback.__name__}: {e}", exc_info=True)
 
 # Optional: Add callback to log config changes
 def on_config_change(new_config):

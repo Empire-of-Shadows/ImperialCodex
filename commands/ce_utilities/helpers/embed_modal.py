@@ -49,7 +49,7 @@ def _is_valid_image_url(url: str) -> bool:
     """Validate if URL is a valid image URL."""
     logger.debug(f"Validating image URL: {url[:50]}{'...' if len(url) > 50 else ''}")
 
-    if not url or not url.startswith(("http://", "https://")):
+    if not url or not url.startswith("https://"):
         logger.debug(f"URL validation failed: Invalid protocol or empty URL")
         return False
 

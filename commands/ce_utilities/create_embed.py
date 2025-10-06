@@ -17,17 +17,12 @@ logger = get_logger("CreateEmbed")
 # Authorization cache (message_id -> {"user_id": int, "expires": float})
 authorization_cache: Dict[int, Dict[str, int | float]] = {}
 
-# Cache expiration time (seconds)
-CACHE_DURATION = 3600
-# Soft cap cache entries to prevent unbounded growth
-MAX_CACHE_ENTRIES = 2000
-
-
 async def is_admin_check(interaction: Interaction) -> bool:
     """
     Return True if the user is an admin or has a specific owner/admin ID.
     """
     is_admin = (
+            # ToDo: Remove hardcoded IDs once we have a better way to handle this
             interaction.user.guild_permissions.administrator
             or interaction.user.id == 1362166614451032346
     )
@@ -228,10 +223,14 @@ class EmbedGroup(commands.GroupCog, name="embed", description="Create and edit e
         """
         logger.debug(f"Updating cache for user {user_id}, message {message_id}")
 
+        # Get settings from config
+        max_cache_entries = config.max_cache_entries
+        cache_duration = config.cache_duration
+
         # Soft-evict earliest-expiring entries if above the cap
-        if len(authorization_cache) >= MAX_CACHE_ENTRIES:
+        if len(authorization_cache) >= max_cache_entries:
             logger.warning(
-                f"Cache at capacity ({len(authorization_cache)}/{MAX_CACHE_ENTRIES}), evicting oldest entries")
+                f"Cache at capacity ({len(authorization_cache)}/{max_cache_entries}), evicting oldest entries")
             # Remove up to 50 oldest entries at once
             oldest = sorted(authorization_cache.items(), key=lambda kv: kv[1]["expires"])[:50]
             for mid, _ in oldest:
@@ -240,7 +239,7 @@ class EmbedGroup(commands.GroupCog, name="embed", description="Create and edit e
 
         authorization_cache[message_id] = {
             "user_id": user_id,
-            "expires": time.time() + CACHE_DURATION,
+            "expires": time.time() + cache_duration,
         }
         logger.debug(f"Cache updated for message {message_id} by user {user_id}")
 
