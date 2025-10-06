@@ -372,3 +372,10 @@ desktop.ini
 *.ipr
 *.sublime-project
 *.sublime-workspace
+/clearcommands.py
+/default-codex.sh
+/default-docker-compose.yml
+/default-Dockerfile
+/healthcheck.py
+/daily/would_you_rather_questions/
+/Database/config_doc.md

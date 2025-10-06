@@ -708,13 +708,6 @@ class DatabaseManager:
             connection='primary',
             indexes=[
                 IndexModel([('uid', 1)], unique=True, name='uid_unique'),
-                IndexModel([('source', 1), ('uid', 1)], unique=True, name='source_uid_unique'),
-                IndexModel([('launcher', 1), ('expires_at', -1)], name='launcher_expires_at'),
-                IndexModel([('source', 1), ('expires_at', -1)], name='source_expires_at'),
-                IndexModel([('sent', 1), ('sent_at', -1)], name='sent_sent_at'),
-                IndexModel([('scraped_at', -1)], name='scraped_at_desc'),
-                IndexModel([('updated_at', -1)], name='updated_at_desc'),
-                IndexModel([('href', 1)], name='href_lookup'),
                 IndexModel([('short_href', 1)], name='short_href_lookup'),
                 IndexModel([('label', 'text'), ('description', 'text')], name='text_search')
             ]

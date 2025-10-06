@@ -4,6 +4,7 @@ import os
 import discord
 from tabulate import tabulate
 import logging
+
 from utils.bot import bot, TOKEN, s
 from utils.logger import get_logger, setup_application_logging
 from utils.sync import load_cogs, attach_databases

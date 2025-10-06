@@ -2,8 +2,6 @@
 Welcome to the official repository for the Empire of Shadows Discord bot! We believe in **transparency**, so we've made our bot's code public for all community members to view.
 This open approach allows you to see how the bot functions and helps us build trust.
 
-
-
 ### What it does
 Our bot helps you explore the server, track your activity, create beautiful announcement cards, share suggestions — all with easy buttons and friendly menus.
 
@@ -11,33 +9,39 @@ Our bot helps you explore the server, track your activity, create beautiful anno
 
 ### Key features
 
-- 🎨 Profile Cards
+**🎨 Profile Cards**
   - Your own “digital ID” that shows level, XP, messages sent, voice time, streaks, badges, inventory, and your server currency (Embers).
   - Themes and layouts you can change with buttons.
   - Make your own custom color theme.
 
-- 📊 User Stats
+
+**📊 User Stats**
   - A personal dashboard with sections for Overview, Messages, Voice, and Emojis.
   - Live refresh for the most up‑to‑date numbers.
   - Option to keep it private or share publicly.
 
-- 🏛️ Imperial Codex (Guide System)
+**🏛️ Imperial Codex (Guide System)**
   - Ask natural questions or mention the bot to get help.
   - Smart search, shortcuts to what you use the most, and “you are here” breadcrumbs so you never get lost.
   - Covers rules, channels, roles, bots, music help, and more.
 
-- 💡 Suggestion Box
+**❔Engagement System**
+  - Posts daily would you rather questions to encourage engagement.
+  - Tracks votes and displays results using a button and leaderboard.
+  - Buttons are persistent and dont break after bot restarts.
+
+**💡 Suggestion Box**
   - Submit ideas with optional categories or use helpful templates.
   - Community voting (👍 👎 ❤️ 🤔) with live updates.
   - Clear statuses: Pending, Under Review, Approved, Implemented, Rejected, On Hold.
   - Get notified when your suggestion’s status changes (if your DMs are open).
 
-- 🧱 Easy Embeds (Fancy Messages)
+**🧱 Easy Embeds (Fancy Messages)**
   - Create polished embeds with titles, descriptions, colors, images, and more — all from a simple form.
   - Role‑based access unlocks more features the higher your role.
   - See which colors and features you can use at any time.
 
-- 🛠️ Mod Tools (for staff)
+**🛠️ Mod Tools (for staff)**
   - Clone and preview existing embeds.
   - Batch clone multiple messages at once.
   - Configure limits, cooldowns, roles allowed, and logging.
