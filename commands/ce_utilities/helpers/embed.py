@@ -19,7 +19,7 @@ def _is_valid_image_url(url: str) -> bool:
 	if not url:
 		logger.debug("Image URL validation failed: empty URL")
 		return False
-	if not url.startswith(("http://", "https://")):
+	if not url.startswith("https://"):
 		logger.debug(f"Image URL validation failed: invalid protocol - {url[:50]}")
 		return False
 	# Allow common image extensions as a soft check. Discord can still load other valid images.
