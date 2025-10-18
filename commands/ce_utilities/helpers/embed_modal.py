@@ -4,7 +4,7 @@ import re
 from typing import Optional, Set, Callable, Awaitable
 import discord
 
-from Database.config_system import config
+from configuration.config_system import config
 from utils.logger import get_logger, log_context, log_performance
 
 logger = get_logger("EmbedModal", level=logging.INFO, colored_console=True)

@@ -10,7 +10,7 @@ import csv
 import os
 from dotenv import load_dotenv
 
-from Database.config_system import config
+from configuration.config_system import config
 from utils.logger import get_logger, log_context, PerformanceLogger
 from Database.DatabaseManager import db_manager
 
