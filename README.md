@@ -14,8 +14,9 @@ Our bot helps you explore the server, track your activity, create beautiful anno
   - Themes and layouts you can change with buttons.
   - Make your own custom color theme.
 
-
 **📊 User Stats**
+
+    - Removed for now
   - A personal dashboard with sections for Overview, Messages, Voice, and Emojis.
   - Live refresh for the most up‑to‑date numbers.
   - Option to keep it private or share publicly.
