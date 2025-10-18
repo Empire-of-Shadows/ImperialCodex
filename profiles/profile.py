@@ -516,23 +516,23 @@ class ProfileCardView(discord.ui.View):
 			logger.info(f"Profile card generated and sent for user {interaction.user.id}")
 			await interaction.followup.send(file=file, ephemeral=not self.public)
 
-	@discord.ui.button(label="Refresh", style=discord.ButtonStyle.secondary, row=0)
+	@discord.ui.button(label="Refresh", style=discord.ButtonStyle.secondary, row=0) # Type: Ignore
 	async def refresh(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.info(f"Profile card refresh requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=not self.public)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
 			await self._send_card(interaction)
 		except Exception as e:
 			logger.exception(f"Failed to refresh profile card for user {interaction.user.id}: {e}")
 			await interaction.followup.send("Couldn't refresh the card right now.", ephemeral=True)
 
-	@discord.ui.button(label="Theme ◀", style=discord.ButtonStyle.primary, row=0)
+	@discord.ui.button(label="Theme ◀", style=discord.ButtonStyle.primary, row=0) # Type: Ignore
 	async def theme_prev(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.debug(f"Theme previous requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=not self.public)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
 
 			if not self.available_themes:
 				self.available_themes = await self.preferences.get_available_themes(
@@ -551,12 +551,12 @@ class ProfileCardView(discord.ui.View):
 		except Exception as e:
 			logger.exception(f"theme_prev failed for user {interaction.user.id}: {e}")
 
-	@discord.ui.button(label="Theme ▶", style=discord.ButtonStyle.primary, row=0)
+	@discord.ui.button(label="Theme ▶", style=discord.ButtonStyle.primary, row=0) # Type: Ignore
 	async def theme_next(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.debug(f"Theme next requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=not self.public)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
 
 			if not self.available_themes:
 				self.available_themes = await self.preferences.get_available_themes(
@@ -575,12 +575,12 @@ class ProfileCardView(discord.ui.View):
 		except Exception as e:
 			logger.exception(f"theme_next failed for user {interaction.user.id}: {e}")
 
-	@discord.ui.button(label="Layout", style=discord.ButtonStyle.secondary, row=0)
+	@discord.ui.button(label="Layout", style=discord.ButtonStyle.secondary, row=0) # Type: Ignore
 	async def toggle_layout(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.debug(f"Layout toggle requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=not self.public)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
 			old_layout = self.layout
 			self.layout = "compact" if self.layout == "detailed" else "detailed"
 			logger.info(f"User {interaction.user.id} switched layout: {old_layout} -> {self.layout}")
@@ -588,48 +588,48 @@ class ProfileCardView(discord.ui.View):
 		except Exception as e:
 			logger.exception(f"toggle_layout failed for user {interaction.user.id}: {e}")
 
-	@discord.ui.button(label="Share Publicly", style=discord.ButtonStyle.success, row=1)
+	@discord.ui.button(label="Share Publicly", style=discord.ButtonStyle.success, row=1) # Type: Ignore
 	async def share_public(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.info(f"Public sharing requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=False)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=False) # Type: Ignore
 			self.public = True
 			await self._send_card(interaction)
 		except Exception as e:
 			logger.exception(f"share_public failed for user {interaction.user.id}: {e}")
 
-	@discord.ui.button(label="Toggle Badges", style=discord.ButtonStyle.secondary, row=1)
+	@discord.ui.button(label="Toggle Badges", style=discord.ButtonStyle.secondary, row=1) # Type: Ignore
 	async def toggle_badges(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.debug(f"Badges toggle requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=not self.public)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
 			self.show_badges = not self.show_badges
 			logger.info(f"User {interaction.user.id} toggled badges: {self.show_badges}")
 			await self._send_card(interaction)
 		except Exception as e:
 			logger.exception(f"toggle_badges failed for user {interaction.user.id}: {e}")
 
-	@discord.ui.button(label="Toggle Inventory", style=discord.ButtonStyle.secondary, row=1)
+	@discord.ui.button(label="Toggle Inventory", style=discord.ButtonStyle.secondary, row=1) # Type: Ignore
 	async def toggle_inventory(self, interaction: discord.Interaction, button: discord.ui.Button):
 		logger.debug(f"Inventory toggle requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=not self.public)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
 			self.show_inventory = not self.show_inventory
 			logger.info(f"User {interaction.user.id} toggled inventory: {self.show_inventory}")
 			await self._send_card(interaction)
 		except Exception as e:
 			logger.exception(f"toggle_inventory failed for user {interaction.user.id}: {e}")
 
-	@discord.ui.button(label="💾 Save Settings", style=discord.ButtonStyle.secondary, row=2)
+	@discord.ui.button(label="💾 Save Settings", style=discord.ButtonStyle.secondary, row=2) # Type: Ignore
 	async def save_preferences(self, interaction: discord.Interaction, button: discord.ui.Button):
 		"""Save current settings as user's default preferences."""
 		logger.info(f"Preferences save requested by user {interaction.user.id}")
 		try:
-			if not interaction.response.is_done():
-				await interaction.response.defer(ephemeral=True)
+			if not interaction.response.is_done(): # Type: Ignore
+				await interaction.response.defer(ephemeral=True) # Type: Ignore
 
 			preferences = {
 				"theme": self.theme,
@@ -699,30 +699,16 @@ class Profile(commands.Cog):
 				# Get ServerData collections through DatabaseManager
 				users_manager = db_manager.get_collection_manager('serverdata_users')
 
-				# For other collections not yet configured in DatabaseManager, use raw collection access
-				user_stats_collection = db_manager.get_raw_collection('ServerData', 'UserStats')
-				inventory_collection = db_manager.get_raw_collection('Inventory', 'Items')
-
 				# Parallel database queries
 				member_task = users_manager.find_one(
 					{"guild_id": guild.id, "id": user.id},
 					{"display_name": 1, "joined_at": 1, "avatar_url": 1, "_id": 0}
 				)
-				stats_task = user_stats_collection.find_one(
-					{"guild_id": guild_id_str, "user_id": user_id_str},
-					{
-						"level": 1, "xp": 1, "embers": 1,
-						"message_stats.messages": 1, "message_stats.daily_streak": 1,
-						"voice_stats.voice_seconds": 1, "voice_stats.voice_sessions": 1,
-						"favorites": 1, "_id": 0
-					}
-				)
-				inventory_task = inventory_collection.count_documents({"user_id": user_id_str})
 
 				# Await all tasks concurrently
 				start_time = time.time()
-				member_data, stats_doc, inv_count = await asyncio.gather(
-					member_task, stats_task, inventory_task, return_exceptions=True
+				member_data = await asyncio.gather(
+					member_task, return_exceptions=True
 				)
 				fetch_time = time.time() - start_time
 				logger.debug(f"Database queries completed in {fetch_time:.3f}s")
@@ -730,7 +716,7 @@ class Profile(commands.Cog):
 			except Exception as e:
 				logger.error(f"Failed to fetch user data from DatabaseManager: {e}")
 				# Fallback to direct database access if needed
-				member_data, stats_doc, inv_count = None, None, 0
+				member_data = None
 
 			# Process member data
 			if isinstance(member_data, Exception) or not member_data:
@@ -750,64 +736,13 @@ class Profile(commands.Cog):
 						logger.warning(f"Failed to parse join date {join_date}: {e}")
 						join_date = "Unknown"
 
-			# Process stats data
-			level = xp = embers = messages = streak = 0
-			voice_seconds = 0.0
-			voice_sessions = 0
-			fav_tuple = None
-
-			if not isinstance(stats_doc, Exception) and stats_doc:
-				logger.debug(f"Stats data retrieved for user {user.id}")
-				level = int(stats_doc.get("level", 0) or 0)
-				xp = int(stats_doc.get("xp", 0) or 0)
-				embers = int(stats_doc.get("embers", 0) or 0)
-
-				ms = stats_doc.get("message_stats", {}) or {}
-				messages = int(ms.get("messages", 0) or 0)
-				streak = int(ms.get("daily_streak", 0) or 0)
-
-				vs = stats_doc.get("voice_stats", {}) or {}
-				voice_seconds = float(vs.get("voice_seconds", 0.0) or 0.0)
-				voice_sessions = int(vs.get("voice_sessions", 0) or 0)
-
-				fav = stats_doc.get("favorites", {}) or {}
-				if isinstance(fav, dict) and fav:
-					try:
-						top_emoji, top_count = max(fav.items(), key=lambda kv: int(kv[1] or 0))
-						fav_tuple = (str(top_emoji), int(top_count))
-						logger.debug(f"Favorite emoji for user {user.id}: {top_emoji} (×{top_count})")
-					except Exception as e:
-						logger.debug(f"Failed to process favorites for user {user.id}: {e}")
-			else:
-				logger.debug(f"No stats data found for user {user.id}, using defaults")
-
-			# Process inventory count
-			if isinstance(inv_count, Exception):
-				logger.warning(f"Failed to get inventory count for user {user.id}: {inv_count}")
-				inv_count = None
-			else:
-				logger.debug(f"Inventory count for user {user.id}: {inv_count}")
-
-			# Calculate XP progress
-			xp_progress, xp_needed = _calculate_xp_progress(level, xp)
-
 			user_data = {
 				"nickname": nickname,
 				"avatar_url": str(avatar_url),
 				"join_date": join_date,
-				"level": level,
-				"xp_progress": xp_progress,
-				"xp_needed": xp_needed,
-				"embers": embers,
-				"messages": messages,
-				"streak": streak,
-				"voice_seconds": voice_seconds,
-				"voice_sessions": voice_sessions,
-				"favorite": fav_tuple,
-				"inventory_count": inv_count
 			}
 
-			logger.info(f"User data compiled for {user.id}: Level {level}, {messages} messages, {embers} embers")
+			logger.info(f"User data compiled for {user.id}: nickname {nickname}, {join_date}")
 			return user_data
 
 	# Theme command group
@@ -830,7 +765,7 @@ class Profile(commands.Cog):
 	):
 		"""Create a custom theme with user-defined colors."""
 		logger.info(f"Custom theme creation requested by {interaction.user.id}: name={name}")
-		await interaction.response.defer(ephemeral=True)
+		await interaction.response.defer(ephemeral=True) # Type: Ignore
 
 		# Check if user already has a custom theme
 		try:
@@ -924,7 +859,7 @@ class Profile(commands.Cog):
 	async def list_themes(self, interaction: discord.Interaction):
 		"""List available themes."""
 		logger.info(f"Theme list requested by user {interaction.user.id}")
-		await interaction.response.defer(ephemeral=True)
+		await interaction.response.defer(ephemeral=True) # Type: Ignore
 
 		try:
 			available_themes = await self.preferences.get_available_themes(
@@ -975,7 +910,7 @@ class Profile(commands.Cog):
 	async def delete_theme(self, interaction: discord.Interaction, theme_name: str):
 		"""Delete a custom theme."""
 		logger.info(f"Theme deletion requested by user {interaction.user.id}: '{theme_name}'")
-		await interaction.response.defer(ephemeral=True)
+		await interaction.response.defer(ephemeral=True) # Type: Ignore
 
 		theme_name = theme_name.lower().strip()
 
@@ -1020,9 +955,7 @@ async def create_profile_card(
 		user_data: dict,
 		theme_palette: dict,
 		layout: str = "detailed",
-		show_inventory: bool = True,
-		show_badges: bool = True,
-) -> Image.Image:
+    ) -> Image.Image:
 	"""Optimized profile card generation."""
 	with PerformanceLogger(logger, f"create_profile_card layout={layout}"):
 		logger.debug(f"Creating profile card: layout={layout}, inventory={show_inventory}, badges={show_badges}")
@@ -1037,14 +970,12 @@ async def create_profile_card(
 		if layout == "detailed":
 			positions = {
 				"nickname": 50, "join_date": 95, "embers": 120,
-				"messages": 142, "voice": 164, "progress_text": 192,
-				"progress_bar": 216, "footer": card_height - 40
+                "footer": card_height - 40
 			}
 		else:
 			positions = {
 				"nickname": 28, "join_date": 62, "embers": 84,
-				"messages": 104, "voice": 124, "progress_text": 148,
-				"progress_bar": 172, "footer": card_height - 32
+                "footer": card_height - 32
 			}
 
 		logger.debug(f"Card dimensions: {card_width}x{card_height}, avatar: {avatar_size}px")
@@ -1080,65 +1011,10 @@ async def create_profile_card(
 		draw.text((base_x, positions["nickname"]), nickname_disp, fill=text_color, font=font_large)
 		draw.text((base_x, positions["join_date"]), f"Joined: {user_data['join_date']}", fill=text_color,
 				  font=font_small)
-		draw.text((base_x, positions["embers"]), f"Embers: {user_data['embers']:,}", fill=text_color, font=font_small)
-		draw.text((base_x, positions["messages"]),
-				  f"Messages: {user_data['messages']:,} • Streak: {user_data['streak']}d",
-				  fill=text_color, font=font_small)
-		draw.text((base_x, positions["voice"]),
-				  f"Voice: {_fmt_voice(user_data['voice_seconds'])} • Sessions: {user_data['voice_sessions']}",
-				  fill=text_color, font=font_small)
-
-		# Progress bar
-		try:
-			pct = min(1.0, float(user_data["xp_progress"]) / max(1, user_data["xp_needed"]))
-			bar_x, bar_w, bar_h = base_x, 440, 18
-			progress_y = positions["progress_bar"]
-
-			if progress_y + bar_h + 10 < positions["footer"]:
-				draw.text((bar_x, positions["progress_text"]),
-						  f"Level {user_data['level']} · {user_data['xp_progress']:,}/{user_data['xp_needed']:,}",
-						  fill=text_color, font=font_small)
-				draw.rounded_rectangle((bar_x, progress_y, bar_x + bar_w, progress_y + bar_h), radius=9,
-									   fill=(255, 255, 255, 30))
-				draw.rounded_rectangle((bar_x, progress_y, bar_x + int(bar_w * pct), progress_y + bar_h), radius=9,
-									   fill=theme_palette["accent"])
-				logger.debug(f"Progress bar rendered: {pct:.1%} ({user_data['xp_progress']}/{user_data['xp_needed']})")
-		except Exception as e:
-			logger.warning(f"Progress bar rendering failed: {e}")
 
 		# Footer elements
-		footer_y = positions["footer"]
-		x_gap = 180
-
-		# Favorite emoji
-		if user_data["favorite"]:
-			fav_emoji, fav_count = user_data["favorite"]
-			logger.debug(f"Rendering favorite emoji: {fav_emoji} (×{fav_count})")
-			try:
-				if _is_emoji_supported(fav_emoji, font_emoji):
-					draw.text((base_x, footer_y), "Fav: ", fill=text_color, font=font_small)
-					fav_text_width = draw.textlength("Fav: ", font=font_small)
-					draw.text((base_x + fav_text_width, footer_y), fav_emoji, fill=text_color, font=font_emoji)
-					emoji_width = draw.textlength(fav_emoji, font=font_emoji)
-					draw.text((base_x + fav_text_width + emoji_width, footer_y), f" × {fav_count}", fill=text_color,
-							  font=font_small)
-				else:
-					draw.text((base_x, footer_y), f"Fav: ⭐ × {fav_count}", fill=text_color, font=font_small)
-			except Exception as e:
-				logger.warning(f"Favorite emoji rendering failed: {e}")
-				draw.text((base_x, footer_y), f"Fav: ⭐ × {fav_count}", fill=text_color, font=font_small)
-
-		# Badges and inventory
-		if show_badges:
-			draw.text((base_x + x_gap, footer_y), "Badges: ⭐ ⭐", fill=text_color, font=font_small)
-			logger.debug("Badges section rendered")
-
-		if show_inventory:
-			inv_txt = f"Items: {user_data['inventory_count']}" if isinstance(user_data["inventory_count"],
-																			 int) else "Items: —"
-			inv_x_offset = x_gap * 2 if show_badges else x_gap
-			draw.text((base_x + inv_x_offset, footer_y), inv_txt, fill=text_color, font=font_small)
-			logger.debug(f"Inventory section rendered: {inv_txt}")
+		# footer_y = positions["footer"]
+		# x_gap = 180
 
 		# Accent line
 		try:

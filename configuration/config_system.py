@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Set, Type, Optional
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
-from Database.sub_systems.settings_define import SettingsDefine, ConfigDefinition
-from Database.sub_systems.settings_update import SettingsUpdate
-from Database.sub_systems.settings_validate import SettingsValidater
+from configuration.sub_systems.settings_define import SettingsDefine, ConfigDefinition
+from configuration.sub_systems.settings_update import SettingsUpdate
+from configuration.sub_systems.settings_validate import SettingsValidater
 from utils.logger import get_logger
 import yaml
 
@@ -40,6 +40,12 @@ class BotConfig(SettingsValidater, SettingsDefine, SettingsUpdate):
     def __init__(self, config_path: str = config_dir):
         logger.info(f"Initializing BotConfig with path: {config_path}")
         self.config_path = config_path
+        # Debugging: List files in config directory
+        if os.path.exists(config_path):
+            logger.debug(f"Files in {config_path}: {os.listdir(config_path)}")
+        else:
+            logger.warning(f"Directory {config_path} does not exist.")
+
         self._config_definitions: Dict[str, ConfigDefinition] = {}
         self._values: Dict[str, Any] = {}
         self._callbacks: List[callable] = []

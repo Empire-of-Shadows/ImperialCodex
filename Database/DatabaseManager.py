@@ -18,7 +18,6 @@ from collections import defaultdict
 # Load environment variables
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
-MONGO_URI2 = os.getenv("MONGO_URI2")
 
 logger = logging.getLogger("DatabaseManager")
 
@@ -629,7 +628,7 @@ class DatabaseManager:
 
     def __init__(self, primary_uri: str = None, secondary_uri: str = None):
         self.primary_uri = primary_uri or MONGO_URI
-        self.secondary_uri = secondary_uri or MONGO_URI2
+        self.secondary_uri = secondary_uri
 
         if not self.primary_uri:
             raise ValueError("Primary MongoDB URI not provided")
@@ -886,14 +885,6 @@ class DatabaseManager:
             connection='primary',
             indexes=[
                 IndexModel([('updated_at', -1)], name='updated_at_desc')
-            ]
-        )
-
-        self._collection_configs['updates_users'] = CollectionConfig(
-            name='Users',
-            database='Ecom-Server',
-            connection='secondary',
-            indexes=[
             ]
         )
         logger.info("Database Manager initialized\n\n\n\n\n\n\n")

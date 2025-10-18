@@ -6,7 +6,7 @@ import discord
 from discord import app_commands, Interaction
 from discord.ext import commands, tasks
 
-from Database.config_system import config
+from configuration.config_system import config
 from commands.ce_utilities.helpers.embed import EditEmbedModal
 from commands.ce_utilities.helpers.embed_modal import EmbedModal
 from utils.cooldown import create_color_cooldown, create_cooldown, create_features, edit_cooldown
