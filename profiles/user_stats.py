@@ -458,30 +458,15 @@ class MemberCommands(commands.Cog):
 			# Get collection managers from the new DatabaseManager
 			users_manager = db_manager.get_collection_manager('serverdata_users')
 
-			# For collections not yet configured in DatabaseManager, use raw collection access
-			user_stats_collection = db_manager.get_raw_collection_from_connection('Ecom-Server', 'Users', 'secondary')
-			inventory_collection = db_manager.get_raw_collection_from_connection('Ecom-Server', 'Inventory',
-																				 'secondary')
-
 			# Parallel database queries
 			member_task = users_manager.find_one(
 				{"guild_id": guild.id, "id": user.id},
 				{"display_name": 1, "joined_at": 1, "avatar_url": 1}
 			)
-			stats_task = user_stats_collection.find_one(
-				{"guild_id": guild_id_str, "user_id": user_id_str},
-				{
-					"level": 1, "xp": 1, "embers": 1,
-					"message_stats.messages": 1, "message_stats.daily_streak": 1,
-					"voice_stats.voice_seconds": 1, "voice_stats.voice_sessions": 1,
-					"favorites": 1
-				}
-			)
-			inventory_task = inventory_collection.count_documents({"user_id": user_id_str})
 
 			# Await all tasks concurrently
-			member_data, stats_doc, inv_count = await asyncio.gather(
-				member_task, stats_task, inventory_task, return_exceptions=True
+			member_data = await asyncio.gather(
+				member_task, return_exceptions=True
 			)
 			fetch_time = _now() - start_time
 			logger.debug(f"{LOG_PREFIX} Database queries completed in {_fmt(fetch_time)}")
@@ -566,11 +551,9 @@ class MemberCommands(commands.Cog):
 			# Use command parameters or saved preferences
 			final_theme = saved_prefs["theme"]
 			final_layout = layout.value if layout else saved_prefs["layout"]
-			final_show_inventory = show_inventory if show_inventory is not None else saved_prefs["show_inventory"]
-			final_show_badges = show_badges if show_badges is not None else saved_prefs["show_badges"]
 
 			logger.debug(
-				f"{LOG_PREFIX} Final settings: theme={final_theme}, layout={final_layout}, inventory={final_show_inventory}, badges={final_show_badges}")
+				f"{LOG_PREFIX} Final settings: theme={final_theme}, layout={final_layout}")
 
 			# Get theme palette
 			theme_palette = await self.preferences.get_theme_palette(final_theme, user_id_str, guild_id_str)
@@ -582,8 +565,6 @@ class MemberCommands(commands.Cog):
 				user_data=user_data,
 				theme_palette=theme_palette,
 				layout=final_layout,
-				show_inventory=final_show_inventory,
-				show_badges=final_show_badges,
 			)
 			card_time = _now() - card_start
 
@@ -597,8 +578,6 @@ class MemberCommands(commands.Cog):
 				user_data, theme_palette,
 				theme=final_theme,
 				layout=final_layout,
-				show_inventory=final_show_inventory,
-				show_badges=final_show_badges,
 				public=public,
 				preferences=self.preferences,
 			)

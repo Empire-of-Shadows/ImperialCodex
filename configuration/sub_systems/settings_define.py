@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Dict, Type, Any
+from typing import List, Dict, Type, Any, Optional
 
 from utils.logger import get_logger
 
@@ -118,4 +118,20 @@ class SettingsDefine:
                 isinstance(k, str) and k.isdigit() and isinstance(v, str)
                 for k, v in x.items()
             )
+        )
+
+        # Announcement Thread Settings (nested structure)
+        self._config_definitions["announcement_thread"] = ConfigDefinition(
+            name="announcement_thread",
+            type=Dict[str, Any],
+            default={
+                "enabled": True,
+                "channel_id": None,
+                "name_format": "💬 {message_content}",
+                "auto_archive_duration": 1440,
+                "welcome_message": "💬 **Discussion Thread**\n\nDiscuss this announcement here!",
+                "auto_delete_threads": True  # Add this line
+            },
+            description="Announcement thread configuration with nested settings",
+            validator=self._validate_announcement_thread_config
         )

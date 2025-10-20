@@ -291,6 +291,42 @@ class BotConfig(SettingsValidater, SettingsDefine, SettingsUpdate):
         raw = self._values.get("channel_names", {})
         return {int(channel_id): name for channel_id, name in raw.items()}
 
+    @property
+    def announcement_channel_id(self) -> Optional[int]:
+        """Get announcement channel ID from nested structure"""
+        announcement_config = self._values.get("announcement_thread", {})
+        return announcement_config.get("channel_id")
+
+    @property
+    def thread_auto_create(self) -> bool:
+        """Get thread auto-create setting from nested structure"""
+        announcement_config = self._values.get("announcement_thread", {})
+        return announcement_config.get("enabled", True)
+
+    @property
+    def thread_name_format(self) -> str:
+        """Get thread name format from nested structure"""
+        announcement_config = self._values.get("announcement_thread", {})
+        return announcement_config.get("name_format", "💬 {message_content}")
+
+    @property
+    def thread_auto_archive_duration(self) -> int:
+        """Get thread auto-archive duration from nested structure"""
+        announcement_config = self._values.get("announcement_thread", {})
+        return announcement_config.get("auto_archive_duration", 1440)
+
+    @property
+    def thread_welcome_message(self) -> str:
+        """Get thread welcome message from nested structure"""
+        announcement_config = self._values.get("announcement_thread", {})
+        return announcement_config.get("welcome_message", "💬 **Discussion Thread**\n\nDiscuss this announcement here!")
+
+    @property
+    def auto_delete_threads(self) -> bool:
+        """Get auto-delete threads setting from nested structure"""
+        announcement_config = self._values.get("announcement_thread", {})
+        return announcement_config.get("auto_delete_threads", True)
+
     def get_channel_name(self, channel_id: int) -> Optional[str]:
         """Get stored name for a channel ID"""
         return self.channel_names.get(channel_id)
