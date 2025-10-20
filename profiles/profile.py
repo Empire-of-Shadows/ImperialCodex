@@ -258,9 +258,7 @@ class ProfilePreferences:
 					prefs_data = data.get("preferences", [])
 					preferences = {
 						"theme": "dark",
-						"layout": "detailed",
-						"show_inventory": True,
-						"show_badges": True
+						"layout": "detailed"
 					}
 					if prefs_data:
 						prefs = prefs_data[0]
@@ -293,7 +291,6 @@ class ProfilePreferences:
 			logger.debug("Using default preferences and theme palette")
 			return {
 				"theme": "dark", "layout": "detailed",
-				"show_inventory": True, "show_badges": True
 			}, _DEFAULT_PALETTES["dark"]
 
 	async def get_user_preferences(self, user_id: str, guild_id: str) -> dict:
@@ -312,9 +309,7 @@ class ProfilePreferences:
 
 			defaults = {
 				"theme": "dark",
-				"layout": "detailed",
-				"show_inventory": True,
-				"show_badges": True
+				"layout": "detailed"
 			}
 
 			if prefs:
@@ -467,8 +462,6 @@ class ProfileCardView(discord.ui.View):
 			theme_palette: dict,  # Pre-computed theme palette
 			theme: str,
 			layout: str,
-			show_inventory: bool,
-			show_badges: bool,
 			public: bool,
 			preferences: ProfilePreferences,
 	):
@@ -478,8 +471,6 @@ class ProfileCardView(discord.ui.View):
 		self.theme = theme
 		self.available_themes = []
 		self.layout = layout if layout in LAYOUTS else "detailed"
-		self.show_inventory = show_inventory
-		self.show_badges = show_badges
 		self.public = public
 		self.preferences = preferences
 
@@ -504,8 +495,6 @@ class ProfileCardView(discord.ui.View):
 				user_data=self.user_data,
 				theme_palette=theme_palette,
 				layout=self.layout,
-				show_inventory=self.show_inventory,
-				show_badges=self.show_badges,
 			)
 
 			buf = BytesIO()
@@ -605,8 +594,6 @@ class ProfileCardView(discord.ui.View):
 		try:
 			if not interaction.response.is_done(): # Type: Ignore
 				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
-			self.show_badges = not self.show_badges
-			logger.info(f"User {interaction.user.id} toggled badges: {self.show_badges}")
 			await self._send_card(interaction)
 		except Exception as e:
 			logger.exception(f"toggle_badges failed for user {interaction.user.id}: {e}")
@@ -617,8 +604,6 @@ class ProfileCardView(discord.ui.View):
 		try:
 			if not interaction.response.is_done(): # Type: Ignore
 				await interaction.response.defer(ephemeral=not self.public) # Type: Ignore
-			self.show_inventory = not self.show_inventory
-			logger.info(f"User {interaction.user.id} toggled inventory: {self.show_inventory}")
 			await self._send_card(interaction)
 		except Exception as e:
 			logger.exception(f"toggle_inventory failed for user {interaction.user.id}: {e}")
@@ -634,8 +619,6 @@ class ProfileCardView(discord.ui.View):
 			preferences = {
 				"theme": self.theme,
 				"layout": self.layout,
-				"show_inventory": self.show_inventory,
-				"show_badges": self.show_badges
 			}
 
 			await self.preferences.save_user_preferences(
@@ -648,9 +631,7 @@ class ProfileCardView(discord.ui.View):
 			await interaction.followup.send(
 				f"✅ Profile settings saved!\n"
 				f"• Theme: **{self.theme.title()}**\n"
-				f"• Layout: **{self.layout.title()}**\n"
-				f"• Show Inventory: **{self.show_inventory}**\n"
-				f"• Show Badges: **{self.show_badges}**",
+				f"• Layout: **{self.layout.title()}**\n",
 				ephemeral=True
 			)
 		except Exception as e:
@@ -958,7 +939,6 @@ async def create_profile_card(
     ) -> Image.Image:
 	"""Optimized profile card generation."""
 	with PerformanceLogger(logger, f"create_profile_card layout={layout}"):
-		logger.debug(f"Creating profile card: layout={layout}, inventory={show_inventory}, badges={show_badges}")
 
 		# Pre-calculate dimensions and positions
 		card_width = 800

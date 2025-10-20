@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from utils.logger import get_logger
 
@@ -89,6 +89,92 @@ class SettingsValidater:
                 return False
         logger.debug("Feature access validation passed")
         return True
+    def _validate_archive_duration(self, value: Any) -> int:
+        """Validate thread auto-archive duration"""
+        if not isinstance(value, int):
+            raise ValueError(f"Archive duration must be an integer, got {type(value)}")
+
+        valid_durations = {60, 1440, 4320, 10080}
+        if value not in valid_durations:
+            raise ValueError(f"Archive duration must be one of {valid_durations}, got {value}")
+
+        return value
+
+    def _validate_optional_channel_id(self, value: Any) -> Optional[int]:
+        """Validate optional channel ID (can be None or integer)"""
+        if value is None:
+            return None
+
+        if not isinstance(value, int):
+            raise ValueError(f"Channel ID must be an integer or None, got {type(value)}")
+
+        if value <= 0:
+            raise ValueError(f"Channel ID must be positive, got {value}")
+
+        return value
+
+    def _validate_bool(self, value: Any) -> bool:
+        """Validate boolean value"""
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            if value.lower() in ('true', 'yes', '1', 'on'):
+                return True
+            elif value.lower() in ('false', 'no', '0', 'off'):
+                return False
+
+        raise ValueError(f"Value must be a boolean, got {type(value)}: {value}")
+
+    def _validate_string(self, value: Any) -> str:
+        """Validate string value"""
+        if not isinstance(value, str):
+            raise ValueError(f"Value must be a string, got {type(value)}")
+        return value
+
+    def _validate_announcement_thread_config(self, value: Any) -> Dict[str, Any]:
+        """Validate nested announcement thread configuration"""
+        if not isinstance(value, dict):
+            raise ValueError(f"Announcement thread config must be a dictionary, got {type(value)}")
+
+        # Set defaults for missing keys
+        validated = value.copy()
+
+        # Validate enabled
+        if "enabled" not in validated:
+            validated["enabled"] = True
+        else:
+            validated["enabled"] = self._validate_bool(validated["enabled"])
+
+        # Validate channel_id (optional)
+        if "channel_id" in validated and validated["channel_id"] is not None:
+            validated["channel_id"] = self._validate_optional_channel_id(validated["channel_id"])
+
+        # Validate name_format
+        if "name_format" not in validated:
+            validated["name_format"] = "💬 {message_content}"
+        else:
+            validated["name_format"] = self._validate_string(validated["name_format"])
+
+        # Validate auto_archive_duration
+        if "auto_archive_duration" not in validated:
+            validated["auto_archive_duration"] = 1440
+        else:
+            validated["auto_archive_duration"] = self._validate_archive_duration(validated["auto_archive_duration"])
+
+        # Validate welcome_message
+        if "welcome_message" not in validated:
+            validated["welcome_message"] = "💬 **Discussion Thread**\n\nDiscuss this announcement here!"
+        else:
+            validated["welcome_message"] = self._validate_string(validated["welcome_message"])
+
+        # Validate auto_delete_threads
+        if "auto_delete_threads" not in validated:
+            validated["auto_delete_threads"] = True
+        else:
+            validated["auto_delete_threads"] = self._validate_bool(validated["auto_delete_threads"])
+
+        return validated
 
     def _validate_and_load(self, config_dict: Dict[str, Any]):
         """Validate and load configuration"""
