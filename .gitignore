@@ -325,7 +325,6 @@ http-client.private.env.json
 .env.*.local
 .envrc
 # Configuration files
-config/
 config.json
 settings.json
 *.config
@@ -381,3 +380,4 @@ desktop.ini
 /Database/config_doc.md
 /Structure.txt
 /configuration/config_doc.md
+/configuration/test_config/
