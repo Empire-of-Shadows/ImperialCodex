@@ -760,7 +760,7 @@ guild_handler = GuildEventHandler(bot, cache_manager)
 
 # Section: Interactions
 # Missing in this section:
-# - (None; all handled via on_interaction)
+# - (None, all handled via on_interaction)
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     await guild_handler.handle_interaction(interaction)
@@ -775,14 +775,6 @@ async def on_member_join(member):
 @bot.event
 async def on_member_remove(member: discord.Member):
     await guild_handler.handle_member_remove(member)
-
-@bot.event
-async def on_guild_role_update(before: discord.Role, after: discord.Role):
-    await guild_handler.handle_guild_role_update(before, after)
-
-@bot.event
-async def on_guild_channel_update(before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
-    await guild_handler.handle_guild_channel_update(before, after)
 
 @bot.event
 async def on_member_update(before, after):
@@ -809,6 +801,7 @@ async def on_member_unban(guild, user):
 # - on_shard_disconnect
 # - on_shard_ready
 # - on_shard_resumed
+
 @bot.event
 async def on_connect():
     #ToDO
@@ -831,6 +824,15 @@ async def on_resumed():
 # Missing in this section:
 # - on_guild_integrations_update
 # - on_audit_log_entry_create
+
+@bot.event
+async def on_guild_role_update(before: discord.Role, after: discord.Role):
+    await guild_handler.handle_guild_role_update(before, after)
+
+@bot.event
+async def on_guild_channel_update(before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
+    await guild_handler.handle_guild_channel_update(before, after)
+
 @bot.event
 async def on_guild_join(guild):
     guild_handler.logger.info(f"Event: on_guild_join - joined guild {guild.name} ({guild.id})")
