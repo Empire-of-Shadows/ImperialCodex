@@ -6,7 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import timedelta
 from Database.DatabaseManager import db_manager
-from profiles.profile import ProfilePreferences, create_profile_card, ProfileCardView
+from profiles.profile import ProfilePreferences, create_profile_card, ProfileCardView, LOG_PREFIX, _now, _fmt
 from io import BytesIO
 import pendulum
 
@@ -17,15 +17,7 @@ logger = get_logger("UserStats")
 # Timeouts and log verbosity
 FETCH_TIMEOUT_SECONDS = 6.0
 SEND_TIMEOUT_SECONDS = 6.0
-LOG_PREFIX = "[UserStats]"
 
-
-def _now() -> float:
-    return time.monotonic()
-
-
-def _fmt(td: float) -> str:
-    return f"{td * 1000:.1f}ms"
 
 
 def _calculate_xp_progress(level: int, current_xp: int) -> tuple[int, int]:
@@ -443,27 +435,62 @@ class MemberCommands(commands.Cog):
         user_id_str = str(user.id)
         guild_id_str = str(guild.id)
 
-        logger.debug(f"{LOG_PREFIX} Fetching user data for user={user.id} in guild={guild.id}")
+        logger.debug(f"{LOG_PREFIX} 🎯 _fetch_user_data METHOD CALLED for user={user.id} in guild={guild.id}")
 
         # Use DatabaseManager for all data fetching
         try:
             # Get collection managers from the new DatabaseManager
             users_manager = db_manager.get_collection_manager('serverdata_members')
+            user_stats_manager = db_manager.user_stats
+
+            logger.debug(f"{LOG_PREFIX} Collection managers initialized")
 
             # Parallel database queries
-
             member_task = users_manager.find_one(
                 {"guild_id": guild.id, "id": user.id},
                 {"display_name": 1, "joined_at": 1, "avatar_url": 1}
             )
-            results = await asyncio.gather(member_task, return_exceptions=True)
-            member_data = results[0]
+
+            # Stats query
+            stats_task = user_stats_manager.find_one(
+                {"guild_id": guild_id_str, "user_id": user_id_str},
+                {
+                    "xp": 1, "level": 1, "embers": 1,
+                    "message_stats.messages": 1, "message_stats.daily_streak": 1,
+                    "voice_stats.voice_seconds": 1, "voice_stats.voice_sessions": 1,
+                    "achievements.unlocked_count": 1, "prestige_level": 1,
+                    "_id": 0
+                }
+            )
+
+            logger.debug(f"{LOG_PREFIX} Database queries submitted")
+
+            # Await all tasks concurrently
+            results = await asyncio.gather(member_task, stats_task, return_exceptions=True)
+            member_data, stats_data = results
             fetch_time = _now() - start_time
             logger.debug(f"{LOG_PREFIX} Database queries completed in {_fmt(fetch_time)}")
+
+            # DEBUG: Log stats query result in detail
+            logger.debug(f"{LOG_PREFIX} Stats query result type: {type(stats_data)}")
+            if not isinstance(stats_data, Exception) and stats_data:
+                logger.debug(f"{LOG_PREFIX} ✅ Stats data FOUND for profile card:")
+                logger.debug(f"{LOG_PREFIX}   - Level: {stats_data.get('level')}")
+                logger.debug(f"{LOG_PREFIX}   - XP: {stats_data.get('xp')}")
+                logger.debug(f"{LOG_PREFIX}   - Embers: {stats_data.get('embers')}")
+                logger.debug(f"{LOG_PREFIX}   - Messages: {stats_data.get('message_stats', {}).get('messages')}")
+            else:
+                logger.warning(f"{LOG_PREFIX} ❌ No stats data found for profile card")
+                if isinstance(stats_data, Exception):
+                    logger.error(f"{LOG_PREFIX} Stats query error: {stats_data}")
+                elif stats_data is None:
+                    logger.warning(f"{LOG_PREFIX} Stats query returned None - no document found")
+
         except Exception as e:
             fetch_time = _now() - start_time
             logger.error(f"{LOG_PREFIX} Database queries failed after {_fmt(fetch_time)}: {e}", exc_info=True)
             raise
+
         # Process member data
         if isinstance(member_data, Exception) or member_data is None:
             if isinstance(member_data, Exception):
@@ -482,14 +509,34 @@ class MemberCommands(commands.Cog):
                     logger.warning(f"{LOG_PREFIX} Failed to parse join date '{join_date}': {date_error}")
                     join_date = "Unknown"
 
-        total_time = _now() - start_time
-        logger.info(f"{LOG_PREFIX} User data fetched successfully in {_fmt(total_time)} for user={user.id}")
+        # Process stats data
+        user_stats = {}
+        if not isinstance(stats_data, Exception) and stats_data:
+            logger.debug(f"{LOG_PREFIX} ✅ Processing stats data for profile card")
+            user_stats = {
+                "xp": stats_data.get("xp", 0),
+                "level": stats_data.get("level", 0),
+                "embers": stats_data.get("embers", 0),
+                "messages": stats_data.get("message_stats", {}).get("messages", 0),
+                "daily_streak": stats_data.get("message_stats", {}).get("daily_streak", 0),
+                "voice_time": stats_data.get("voice_stats", {}).get("voice_seconds", 0),
+                "voice_sessions": stats_data.get("voice_stats", {}).get("voice_sessions", 0),
+                "achievements": stats_data.get("achievements", {}).get("unlocked_count", 0),
+                "prestige": stats_data.get("prestige_level", 0)
+            }
+            logger.debug(f"{LOG_PREFIX} Processed stats: {user_stats}")
+        else:
+            logger.warning(f"{LOG_PREFIX} ❌ No stats data to process for profile card")
 
-        return {
+        user_data = {
             "nickname": nickname,
             "avatar_url": str(avatar_url),
-            "join_date": join_date
+            "join_date": join_date,
+            "stats": user_stats
         }
+
+        logger.info(f"{LOG_PREFIX} User data compiled for {user.id}: nickname {nickname}, stats: {bool(user_stats)}")
+        return user_data
 
     # Member command group
     member_group = app_commands.Group(name="member", description="Member profile and stats commands")
@@ -522,7 +569,7 @@ class MemberCommands(commands.Cog):
         logger.info(
             f"{LOG_PREFIX} Profile card requested for user={user.id} ({user.display_name}) by requester={interaction.user.id}, public={public}")
 
-        await interaction.response.defer(ephemeral=not public) # type: ignore
+        await interaction.response.defer(ephemeral=not public)  # type: ignore
 
         try:
             user_id_str = str(user.id)
@@ -540,20 +587,27 @@ class MemberCommands(commands.Cog):
             # Use command parameters or saved preferences
             final_theme = saved_prefs["theme"]
             final_layout = layout.value if layout else saved_prefs["layout"]
+            final_show_stats = saved_prefs.get("show_stats", True)  # Get show_stats preference
+            final_show_badges = show_badges if show_badges is not None else saved_prefs.get("show_badges", True)
+            final_show_inventory = show_inventory if show_inventory is not None else saved_prefs.get("show_inventory",
+                                                                                                     False)
 
             logger.debug(
-                f"{LOG_PREFIX} Final settings: theme={final_theme}, layout={final_layout}")
+                f"{LOG_PREFIX} Final settings: theme={final_theme}, layout={final_layout}, stats={final_show_stats}")
 
             # Get theme palette
             theme_palette = await self.preferences.get_theme_palette(final_theme, user_id_str, guild_id_str)
 
             logger.debug(f"{LOG_PREFIX} Generating profile card image")
             card_start = _now()
-            # Generate the card
+            # Generate the card - PASS ALL PARAMETERS INCLUDING show_stats
             image = await create_profile_card(
                 user_data=user_data,
                 theme_palette=theme_palette,
                 layout=final_layout,
+                show_stats=final_show_stats,  # ADD THIS
+                show_badges=final_show_badges,  # ADD THIS
+                show_inventory=final_show_inventory  # ADD THIS
             )
             card_time = _now() - card_start
 
@@ -569,6 +623,9 @@ class MemberCommands(commands.Cog):
                 layout=final_layout,
                 public=public,
                 preferences=self.preferences,
+                show_stats=final_show_stats,  # ADD THIS
+                show_badges=final_show_badges,  # ADD THIS
+                show_inventory=final_show_inventory  # ADD THIS
             )
 
             await interaction.followup.send(

@@ -22,6 +22,16 @@ load_dotenv()
 logger = get_logger("Profile")
 FONT_PATH = "fonts/Bebas_Neue/BebasNeue-Regular.ttf"  # Ensure this path exists
 
+LOG_PREFIX = "[UserStats]"
+
+
+def _now() -> float:
+    return time.monotonic()
+
+
+def _fmt(td: float) -> str:
+    return f"{td * 1000:.1f}ms"
+
 THEMES = ["dark", "neon", "gold", "minimal", "stats"]
 LAYOUTS = ["detailed", "compact", "stats"]
 
@@ -726,97 +736,6 @@ class Profile(commands.Cog):
             logger.info("HTTP session closed")
         logger.info("Profile cog unloaded")
 
-    async def _fetch_user_data(self, user: discord.User, guild: discord.Guild) -> dict:
-        """Efficiently fetch all user data in parallel."""
-        with PerformanceLogger(logger, f"fetch_user_data for {user.id}"):
-            user_id_str = str(user.id)
-            guild_id_str = str(guild.id)
-
-            logger.debug(f"Fetching user data for {user.id} in guild {guild.id}")
-
-            # Use DatabaseManager for data fetching
-            try:
-                # Get ServerData collections through DatabaseManager
-                users_manager = db_manager.get_collection_manager('serverdata_members')
-                user_stats_manager = db_manager.get_collection_manager('user_stats')
-
-                # Parallel database queries
-                member_task = users_manager.find_one(
-                    {"guild_id": guild.id, "id": user.id},
-                    {"display_name": 1, "joined_at": 1, "avatar_url": 1, "_id": 0}
-                )
-
-                stats_task = user_stats_manager.find_one(
-                    {"guild_id": guild_id_str, "user_id": user_id_str},
-                    {
-                        "xp": 1, "level": 1, "embers": 1,
-                        "message_stats.messages": 1, "message_stats.daily_streak": 1,
-                        "voice_stats.voice_seconds": 1, "voice_stats.voice_sessions": 1,
-                        "achievements.unlocked_count": 1, "prestige_level": 1,
-                        "_id": 0
-                    }
-                )
-
-                # Await all tasks concurrently
-                start_time = time.time()
-                member_data, stats_data = await asyncio.gather(
-                    member_task, stats_task, return_exceptions=True
-                )
-                fetch_time = time.time() - start_time
-                logger.debug(f"Database queries completed in {fetch_time:.3f}s")
-
-            except Exception as e:
-                logger.error(f"Failed to fetch user data from DatabaseManager: {e}")
-                # Fallback to direct database access if needed
-                member_data = None
-                stats_data = None
-
-            # Process member data
-            if isinstance(member_data, Exception) or not member_data:
-                logger.debug(f"No member data found for user {user.id}, using Discord fallbacks")
-                nickname = user.name
-                join_date = user.joined_at.strftime("MMMM DD, YYYY") if user.joined_at else "Unknown"
-                avatar_url = user.display_avatar.url
-            else:
-                logger.debug(f"Member data retrieved for user {user.id}")
-                nickname = member_data.get("display_name", user.name)
-                join_date = member_data.get("joined_at", "Unknown")
-                avatar_url = member_data.get("avatar_url", user.display_avatar.url)
-                if join_date != "Unknown":
-                    try:
-                        join_date = pendulum.parse(join_date).format("MMMM DD, YYYY")
-                    except Exception as e:
-                        logger.warning(f"Failed to parse join date {join_date}: {e}")
-                        join_date = "Unknown"
-
-            # Process stats data
-            user_stats = {}
-            if not isinstance(stats_data, Exception) and stats_data:
-                logger.debug(f"Stats data retrieved for user {user.id}")
-                user_stats = {
-                    "xp": stats_data.get("xp", 0),
-                    "level": stats_data.get("level", 0),
-                    "embers": stats_data.get("embers", 0),
-                    "messages": stats_data.get("message_stats", {}).get("messages", 0),
-                    "daily_streak": stats_data.get("message_stats", {}).get("daily_streak", 0),
-                    "voice_time": stats_data.get("voice_stats", {}).get("voice_seconds", 0),
-                    "voice_sessions": stats_data.get("voice_stats", {}).get("voice_sessions", 0),
-                    "achievements": stats_data.get("achievements", {}).get("unlocked_count", 0),
-                    "prestige": stats_data.get("prestige_level", 0)
-                }
-            else:
-                logger.debug(f"No stats data found for user {user.id}")
-
-            user_data = {
-                "nickname": nickname,
-                "avatar_url": str(avatar_url),
-                "join_date": join_date,
-                "stats": user_stats
-            }
-
-            logger.info(f"User data compiled for {user.id}: nickname {nickname}, stats: {bool(user_stats)}")
-            return user_data
-
     # Theme command group
     theme_group = app_commands.Group(name="theme", description="Manage profile card themes")
 
@@ -1022,6 +941,17 @@ async def create_profile_card(
     """Optimized profile card generation with stats integration."""
     with PerformanceLogger(logger, f"create_profile_card layout={layout}"):
 
+        # DEBUG: Check what data we're receiving
+        logger.debug(f"{LOG_PREFIX} create_profile_card called with:")
+        logger.debug(f"{LOG_PREFIX} - layout: {layout}")
+        logger.debug(f"{LOG_PREFIX} - show_stats: {show_stats}")
+        logger.debug(f"{LOG_PREFIX} - user_data keys: {list(user_data.keys())}")
+        logger.debug(f"{LOG_PREFIX} - has stats key: {'stats' in user_data}")
+        if 'stats' in user_data:
+            logger.debug(f"{LOG_PREFIX} - stats data: {user_data['stats']}")
+        else:
+            logger.warning(f"{LOG_PREFIX} - NO STATS DATA IN USER_DATA!")
+
         # Determine card dimensions based on layout and content
         base_height = 300
         if layout == "compact":
@@ -1039,7 +969,7 @@ async def create_profile_card(
         avatar_pos = (50, 40 if layout == "detailed" else 20)
         base_x = 300
 
-        logger.debug(f"Card dimensions: {card_width}x{card_height}, layout: {layout}, stats: {show_stats}")
+        logger.debug(f"{LOG_PREFIX} Card dimensions: {card_width}x{card_height}, layout: {layout}, stats: {show_stats}")
 
         # Create base image
         card = Image.new("RGBA", (card_width, card_height), theme_palette["bg"])
@@ -1062,14 +992,14 @@ async def create_profile_card(
                 nickname_disp = nickname_disp[:-2]
             if nickname_disp != user_data["nickname"]:
                 nickname_disp += "…"
-                logger.debug(f"Truncated nickname: '{user_data['nickname']}' -> '{nickname_disp}'")
+                logger.debug(f"{LOG_PREFIX} Truncated nickname: '{user_data['nickname']}' -> '{nickname_disp}'")
         except Exception as e:
-            logger.warning(f"Nickname truncation failed: {e}")
+            logger.warning(f"{LOG_PREFIX} Nickname truncation failed: {e}")
 
         # Render basic text elements
         text_color = theme_palette["text"]
         accent_color = theme_palette["accent"]
-        logger.debug("Rendering text elements")
+        logger.debug(f"{LOG_PREFIX} Rendering text elements")
 
         # Position tracking
         current_y = 50 if layout == "detailed" else 28
@@ -1084,13 +1014,19 @@ async def create_profile_card(
 
         # Stats section
         user_stats = user_data.get("stats", {})
+        logger.debug(
+            f"{LOG_PREFIX} Processing stats - show_stats: {show_stats}, has_stats: {bool(user_stats)}, layout: {layout}")
+
         if show_stats and user_stats and layout != "compact":
+            logger.debug(f"{LOG_PREFIX} Rendering detailed stats section")
             stats_start_y = current_y
 
             # Level and XP progress
             level = user_stats.get("level", 0)
             xp = user_stats.get("xp", 0)
             embers = user_stats.get("embers", 0)
+
+            logger.debug(f"{LOG_PREFIX} Stats values - level: {level}, xp: {xp}, embers: {embers}")
 
             # Calculate XP progress
             xp_progress, xp_needed = _calculate_xp_progress(level, xp)
@@ -1138,13 +1074,31 @@ async def create_profile_card(
                 current_y += 25
 
         elif layout == "compact":
-            # Compact layout - just show level and embers
-            level = user_stats.get("level", 0)
-            embers = user_stats.get("embers", 0)
-            if level > 0:
-                draw.text((base_x, current_y), f"Level {level} | {_format_number(embers)} embers",
-                          fill=accent_color, font=font_small)
+            # Compact layout - show level and embers if stats exist
+            logger.debug(f"{LOG_PREFIX} Processing compact layout stats")
+            if user_stats:  # Check if stats exist at all
+                level = user_stats.get("level", 0)
+                embers = user_stats.get("embers", 0)
+                logger.debug(f"{LOG_PREFIX} Compact stats - level: {level}, embers: {embers}")
+                if level > 0 or embers > 0:
+                    stats_text = f"Level {level}"
+                    if embers > 0:
+                        stats_text += f" | {_format_number(embers)} embers"
+                    draw.text((base_x, current_y), stats_text,
+                              fill=accent_color, font=font_small)
+                    current_y += 25
+                    logger.debug(f"{LOG_PREFIX} Rendered compact stats: {stats_text}")
+                else:
+                    logger.debug(f"{LOG_PREFIX} No level or embers to display in compact layout")
+            else:
+                # Show placeholder if no stats
+                logger.debug(f"{LOG_PREFIX} No stats data for compact layout")
+                draw.text((base_x, current_y), "No stats available",
+                          fill=text_color, font=font_small)
                 current_y += 25
+        else:
+            logger.debug(
+                f"{LOG_PREFIX} Skipping stats display - show_stats: {show_stats}, has_stats: {bool(user_stats)}")
 
         # Footer elements
         footer_y = card_height - 40
@@ -1153,9 +1107,9 @@ async def create_profile_card(
         try:
             accent_y = card_height - 8
             draw.rectangle((0, accent_y, card_width, card_height), fill=accent_color)
-            logger.debug("Accent line rendered")
+            logger.debug(f"{LOG_PREFIX} Accent line rendered")
         except Exception as e:
-            logger.warning(f"Accent line rendering failed: {e}")
+            logger.warning(f"{LOG_PREFIX} Accent line rendering failed: {e}")
 
         # Wait for avatar and apply it
         try:
@@ -1166,13 +1120,13 @@ async def create_profile_card(
                 mask_draw = ImageDraw.Draw(mask)
                 mask_draw.ellipse((0, 0, avatar_size, avatar_size), fill=255)
                 card.paste(avatar, avatar_pos, mask)
-                logger.debug("Avatar applied successfully")
+                logger.debug(f"{LOG_PREFIX} Avatar applied successfully")
             else:
-                logger.warning("Avatar could not be loaded")
+                logger.warning(f"{LOG_PREFIX} Avatar could not be loaded")
         except Exception as e:
-            logger.error(f"Avatar processing failed: {e}")
+            logger.error(f"{LOG_PREFIX} Avatar processing failed: {e}")
 
-        logger.info("Profile card generation completed successfully")
+        logger.info(f"{LOG_PREFIX} Profile card generation completed successfully")
         return card
 
 
