@@ -12,7 +12,7 @@ from utils.logger import get_logger
 
 # Load environment variables and logger setup
 load_dotenv()
-MONGO_URI, MONGO_URI2 = os.getenv("MONGO_URI"), os.getenv("MONGO_URI2")
+MONGO_URI, MONGO_URI2 = os.getenv("EMPIRESDATA"), os.getenv("MONGO_URI2")
 logger = get_logger("Sync")
 
 
@@ -76,18 +76,18 @@ async def attach_databases():
 
 	try:
 
-		# MongoDB Client 2 - E-commerce Database
-		mongo_client2 = AsyncIOMotorClient(MONGO_URI2)
-		bot.db_ecom = mongo_client2["Ecom-Server"]
-
-		result, is_success = await attach_attribute("settings", bot.db_ecom["Settings"])
-		(success_logs if is_success else failed_logs).append(result)
-		result, is_success = await attach_attribute("Emembers", bot.db_ecom["Users"])
-		(success_logs if is_success else failed_logs).append(result)
-		result, is_success = await attach_attribute("Eboosts", bot.db_ecom["Boosts"])
-		(success_logs if is_success else failed_logs).append(result)
-		result, is_success = await attach_attribute("power-ups", bot.db_ecom["power-ups"])
-		(success_logs if is_success else failed_logs).append(result)
+		# # MongoDB Client 2 - E-commerce Database
+		# mongo_client2 = AsyncIOMotorClient(MONGO_URI2)
+		# bot.db_ecom = mongo_client2["Ecom-Server"]
+        #
+		# result, is_success = await attach_attribute("settings", bot.db_ecom["Settings"])
+		# (success_logs if is_success else failed_logs).append(result)
+		# result, is_success = await attach_attribute("Emembers", bot.db_ecom["Users"])
+		# (success_logs if is_success else failed_logs).append(result)
+		# result, is_success = await attach_attribute("Eboosts", bot.db_ecom["Boosts"])
+		# (success_logs if is_success else failed_logs).append(result)
+		# result, is_success = await attach_attribute("power-ups", bot.db_ecom["power-ups"])
+		# (success_logs if is_success else failed_logs).append(result)
 
 		# Initialize Cache Manager
 		from utils.cache import create_cache_manager
