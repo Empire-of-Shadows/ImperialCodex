@@ -88,9 +88,8 @@ class AnnouncementThreadCog(commands.Cog):
             thread_name = self.format_thread_name(message)
             logger.info(f"Creating thread with name: {thread_name}")
 
-            # Create public thread by using start_thread instead of create_thread
             # This gives us more control over thread creation
-            thread = await message.channel.create_thread(
+            thread = await message.create_thread(
                 name=thread_name,
                 auto_archive_duration=self.thread_auto_archive_duration,
                 reason="Automatic announcement discussion thread",
