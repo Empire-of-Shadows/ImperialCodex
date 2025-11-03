@@ -1,3 +1,5 @@
+from asyncio import sleep
+
 import discord
 from discord.ext import commands
 import logging
@@ -87,9 +89,10 @@ class AnnouncementThreadCog(commands.Cog):
             # Format thread name
             thread_name = self.format_thread_name(message)
             logger.info(f"Creating thread with name: {thread_name}")
-
+            await sleep(3)
+            # Create public thread by using start_thread instead of create_thread
             # This gives us more control over thread creation
-            thread = await message.create_thread(
+            thread = await message.channel.create_thread(
                 name=thread_name,
                 auto_archive_duration=self.thread_auto_archive_duration,
                 reason="Automatic announcement discussion thread",
