@@ -22,6 +22,7 @@ OPTION2_EMOJI = "2️⃣"  # Reaction for option 2
 
 # Scheduling constants
 TARGET_HOUR = 6
+TARGET_MINUTE = 00
 TARGET_TIMEZONE = pytz.timezone("America/Chicago")
 
 logger = get_logger("WYR")
@@ -440,16 +441,24 @@ class WYR(commands.Cog):
             chicago_now = datetime.now(TARGET_TIMEZONE)
             logger.info(f"Current Chicago time: {chicago_now}")
 
-            # Create today's 6 AM in Chicago timezone
-            today_6am = chicago_now.replace(hour=TARGET_HOUR, minute=0, second=0, microsecond=0)
+            # Create today's 6:30 AM in Chicago timezone
+            today_6am = chicago_now.replace(
+                hour=TARGET_HOUR,
+                minute=TARGET_MINUTE,
+                second=0,
+                microsecond=0
+            )
 
-            # If it's already past 6 AM today, schedule for tomorrow
+            # If it's already past 6:30 AM today, schedule for tomorrow
             if chicago_now >= today_6am:
                 next_6am = today_6am + timedelta(days=1)
             else:
                 next_6am = today_6am
 
-            logger.info(f"Next scheduled WYR post: {next_6am} ({next_6am.strftime('%A, %B %d at %I:%M %p %Z')})")
+            logger.info(
+                f"Next scheduled WYR post: {next_6am} "
+                f"({next_6am.strftime('%A, %B %d at %I:%M %p %Z')})"
+            )
             return next_6am
 
         except Exception as e:
