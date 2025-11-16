@@ -22,7 +22,7 @@ OPTION2_EMOJI = "2️⃣"  # Reaction for option 2
 
 # Scheduling constants
 TARGET_HOUR = 6
-TARGET_MINUTE = 30
+TARGET_MINUTE = 00
 TARGET_TIMEZONE = pytz.timezone("America/Chicago")
 
 logger = get_logger("WYR")
