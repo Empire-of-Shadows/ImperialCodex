@@ -176,6 +176,34 @@ class SettingsValidater:
 
         return validated
 
+    def _validate_tag_tracker_config(self, value: Any) -> bool:
+        """Validate tag_tracker configuration"""
+        if not isinstance(value, dict):
+            logger.warning("Tag tracker validation failed: not a dict")
+            return False
+
+        # Validate enabled
+        if "enabled" not in value:
+            value["enabled"] = False
+        elif not isinstance(value["enabled"], bool):
+            logger.warning("Tag tracker validation failed: 'enabled' is not a boolean")
+            return False
+
+        # Validate role_id
+        if "role_id" in value and value["role_id"] is not None:
+            if not isinstance(value["role_id"], int):
+                logger.warning("Tag tracker validation failed: 'role_id' is not an integer")
+                return False
+
+        # Validate server_tag
+        if "server_tag" in value and value["server_tag"] is not None:
+            if not isinstance(value["server_tag"], str):
+                logger.warning("Tag tracker validation failed: 'server_tag' is not a string")
+                return False
+        
+        logger.debug("Tag tracker validation passed")
+        return True
+
     def _validate_and_load(self, config_dict: Dict[str, Any]):
         """Validate and load configuration"""
         logger.debug("Validating configuration data")

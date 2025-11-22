@@ -327,6 +327,11 @@ class BotConfig(SettingsValidater, SettingsDefine, SettingsUpdate):
         announcement_config = self._values.get("announcement_thread", {})
         return announcement_config.get("auto_delete_threads", True)
 
+    @property
+    def tag_tracker(self) -> Dict[str, Any]:
+        """Get tag tracker settings"""
+        return self._values.get("tag_tracker", {"enabled": False, "role_id": None, "server_tag": None})
+
     def get_channel_name(self, channel_id: int) -> Optional[str]:
         """Get stored name for a channel ID"""
         return self.channel_names.get(channel_id)
