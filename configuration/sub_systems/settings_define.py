@@ -135,3 +135,16 @@ class SettingsDefine:
             description="Announcement thread configuration with nested settings",
             validator=self._validate_announcement_thread_config
         )
+
+        # Tag Tracker Settings
+        self._config_definitions["tag_tracker"] = ConfigDefinition(
+            name="tag_tracker",
+            type=Dict[str, Any],
+            default={
+                "enabled": False,
+                "role_id": None,
+                "server_tag": None
+            },
+            description="Tag tracker configuration",
+            validator=self._validate_tag_tracker_config
+        )

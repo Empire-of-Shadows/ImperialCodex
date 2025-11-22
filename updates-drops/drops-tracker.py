@@ -21,7 +21,7 @@ class DropsStatsCog(commands.Cog):
     Discord Cog that:
       - Initializes MongoDB database/collections on load
       - Listens for posts in specific channels
-      - Tracks monthly counts per channel and a running average-per-month
+      - Tracks weekly and monthly counts per channel and a running average-per-month
     """
 
 	def __init__(self, bot: commands.Bot):
@@ -61,10 +61,12 @@ class DropsStatsCog(commands.Cog):
 
 				# Test connectivity by checking collection health
 				monthly_manager = db_manager.get_collection_manager('updates_monthly')
+				weekly_manager = db_manager.get_collection_manager('updates_weekly')
 				totals_manager = db_manager.get_collection_manager('updates_totals')
 
 				# Simple connectivity test
 				await monthly_manager.count_documents({})
+				await weekly_manager.count_documents({})
 				await totals_manager.count_documents({})
 
 				logger.info("DatabaseManager initialized successfully for DropsStatsCog")
@@ -233,7 +235,7 @@ class DropsStatsCog(commands.Cog):
 	async def _process_event_async(self, coll_name: str, event_dt: datetime) -> None:
 		"""
         For each message event:
-          - Upsert monthly count doc and increment count.
+          - Upsert weekly and monthly count docs and increment their counts.
           - If this is the first message for the month (doc was created), increment months_with_data.
           - Increment total_count.
           - Recompute and store average_per_month (rounded to 2 decimals).
@@ -245,12 +247,15 @@ class DropsStatsCog(commands.Cog):
 			)
 			year = event_dt.year
 			month = event_dt.month
+			week = event_dt.isocalendar().week
 			now = datetime.now(tz=timezone.utc)
 
 			# Get collection managers
 			monthly_manager = db_manager.get_collection_manager('updates_monthly')
+			weekly_manager = db_manager.get_collection_manager('updates_weekly')
 			totals_manager = db_manager.get_collection_manager('updates_totals')
 
+			# Monthly Update
 			monthly_id = {"coll": coll_name, "year": year, "month": month}
 			logger.debug("Monthly doc _id=%s", monthly_id)
 
@@ -273,6 +278,26 @@ class DropsStatsCog(commands.Cog):
 			logger.debug(
 				"Monthly stats update completed for %s (new_month=%s)",
 				monthly_id, new_month_started
+			)
+
+			# Weekly Update
+			weekly_id = {"coll": coll_name, "year": year, "week": week}
+			logger.debug("Weekly doc _id=%s", weekly_id)
+
+			with PerformanceLogger(logger, f"weekly_increment::{coll_name}::{year}-{week:02d}"):
+				# Upsert weekly document
+				await weekly_manager.update_one(
+					{"_id": weekly_id},
+					{
+						"$inc": {"count": 1},
+						"$setOnInsert": {"first_event_at": now},
+						"$set": {"updated_at": now},
+					},
+					upsert=True
+				)
+			logger.debug(
+				"Weekly stats update completed for %s",
+				weekly_id
 			)
 
 			# Build totals update

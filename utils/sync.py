@@ -18,7 +18,7 @@ logger = get_logger("Sync")
 
 # Constants
 OWNER_ID = 1264236749060575355
-COG_DIRECTORIES = ["./NewMembers", "./listeners", "./games", "./commands", "./daily", "./ECOM", "./Guide", "./updates-drops", "profiles"]
+COG_DIRECTORIES = ["./NewMembers", "./listeners", "./games", "./commands", "./daily", "./ECOM", "./Guide", "./updates-drops", "profiles", "./trackers"]
 
 
 @bot.command(name="load_cogs", help="Loads all cogs in the COG_DIRECTORIES list.")
