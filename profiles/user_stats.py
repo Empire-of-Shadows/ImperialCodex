@@ -6,13 +6,22 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import timedelta
 from Database.DatabaseManager import db_manager
-from profiles.profile import ProfilePreferences, create_profile_card, ProfileCardView, LOG_PREFIX, _now, _fmt
-from io import BytesIO
-import pendulum
 
 from utils.logger import get_logger
 
 logger = get_logger("UserStats")
+
+# Logging helpers
+LOG_PREFIX = "[UserStats]"
+
+
+def _now() -> float:
+    return time.monotonic()
+
+
+def _fmt(td: float) -> str:
+    return f"{td * 1000:.1f}ms"
+
 
 # Timeouts and log verbosity
 FETCH_TIMEOUT_SECONDS = 6.0
@@ -410,12 +419,11 @@ class RefreshButton(discord.ui.Button):
 
 class MemberCommands(commands.Cog):
     """
-    Independent cog that handles all member-related commands (card, settings, stats).
+    Independent cog that handles all member-related commands (stats).
     """
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.preferences = None
         logger.info(f"{LOG_PREFIX} MemberCommands cog initializing")
 
     async def cog_load(self):
@@ -423,276 +431,13 @@ class MemberCommands(commands.Cog):
         logger.info(f"{LOG_PREFIX} Loading MemberCommands cog")
         try:
             await db_manager.initialize()
-            self.preferences = ProfilePreferences()
             logger.info(f"{LOG_PREFIX} MemberCommands cog loaded successfully")
         except Exception as e:
             logger.error(f"{LOG_PREFIX} Failed to load MemberCommands cog: {e}", exc_info=True)
             raise
 
-    async def _fetch_user_data(self, user: discord.User, guild: discord.Guild) -> dict:
-        """Efficiently fetch all user data in parallel."""
-        start_time = _now()
-        user_id_str = str(user.id)
-        guild_id_str = str(guild.id)
-
-        logger.debug(f"{LOG_PREFIX} 🎯 _fetch_user_data METHOD CALLED for user={user.id} in guild={guild.id}")
-
-        # Use DatabaseManager for all data fetching
-        try:
-            # Get collection managers from the new DatabaseManager
-            users_manager = db_manager.get_collection_manager('serverdata_members')
-            user_stats_manager = db_manager.user_stats
-
-            logger.debug(f"{LOG_PREFIX} Collection managers initialized")
-
-            # Parallel database queries
-            member_task = users_manager.find_one(
-                {"guild_id": guild.id, "id": user.id},
-                {"display_name": 1, "joined_at": 1, "avatar_url": 1}
-            )
-
-            # Stats query
-            stats_task = user_stats_manager.find_one(
-                {"guild_id": guild_id_str, "user_id": user_id_str},
-                {
-                    "xp": 1, "level": 1, "embers": 1,
-                    "message_stats.messages": 1, "message_stats.daily_streak": 1,
-                    "voice_stats.voice_seconds": 1, "voice_stats.voice_sessions": 1,
-                    "achievements.unlocked_count": 1, "prestige_level": 1,
-                    "_id": 0
-                }
-            )
-
-            logger.debug(f"{LOG_PREFIX} Database queries submitted")
-
-            # Await all tasks concurrently
-            results = await asyncio.gather(member_task, stats_task, return_exceptions=True)
-            member_data, stats_data = results
-            fetch_time = _now() - start_time
-            logger.debug(f"{LOG_PREFIX} Database queries completed in {_fmt(fetch_time)}")
-
-            # DEBUG: Log stats query result in detail
-            logger.debug(f"{LOG_PREFIX} Stats query result type: {type(stats_data)}")
-            if not isinstance(stats_data, Exception) and stats_data:
-                logger.debug(f"{LOG_PREFIX} ✅ Stats data FOUND for profile card:")
-                logger.debug(f"{LOG_PREFIX}   - Level: {stats_data.get('level')}")
-                logger.debug(f"{LOG_PREFIX}   - XP: {stats_data.get('xp')}")
-                logger.debug(f"{LOG_PREFIX}   - Embers: {stats_data.get('embers')}")
-                logger.debug(f"{LOG_PREFIX}   - Messages: {stats_data.get('message_stats', {}).get('messages')}")
-            else:
-                logger.warning(f"{LOG_PREFIX} ❌ No stats data found for profile card")
-                if isinstance(stats_data, Exception):
-                    logger.error(f"{LOG_PREFIX} Stats query error: {stats_data}")
-                elif stats_data is None:
-                    logger.warning(f"{LOG_PREFIX} Stats query returned None - no document found")
-
-        except Exception as e:
-            fetch_time = _now() - start_time
-            logger.error(f"{LOG_PREFIX} Database queries failed after {_fmt(fetch_time)}: {e}", exc_info=True)
-            raise
-
-        # Process member data
-        if isinstance(member_data, Exception) or member_data is None:
-            if isinstance(member_data, Exception):
-                logger.warning(f"{LOG_PREFIX} Member data query failed: {member_data}")
-            nickname = user.name
-            join_date = user.joined_at.strftime("MMMM DD, YYYY") if user.joined_at else "Unknown"
-            avatar_url = user.display_avatar.url
-        else:
-            nickname = member_data.get("display_name", user.name)
-            join_date = member_data.get("joined_at", "Unknown")
-            avatar_url = member_data.get("avatar_url", user.display_avatar.url)
-            if join_date != "Unknown":
-                try:
-                    join_date = pendulum.parse(join_date).format("MMMM DD, YYYY")
-                except Exception as date_error:
-                    logger.warning(f"{LOG_PREFIX} Failed to parse join date '{join_date}': {date_error}")
-                    join_date = "Unknown"
-
-        # Process stats data
-        user_stats = {}
-        if not isinstance(stats_data, Exception) and stats_data:
-            logger.debug(f"{LOG_PREFIX} ✅ Processing stats data for profile card")
-            user_stats = {
-                "xp": stats_data.get("xp", 0),
-                "level": stats_data.get("level", 0),
-                "embers": stats_data.get("embers", 0),
-                "messages": stats_data.get("message_stats", {}).get("messages", 0),
-                "daily_streak": stats_data.get("message_stats", {}).get("daily_streak", 0),
-                "voice_time": stats_data.get("voice_stats", {}).get("voice_seconds", 0),
-                "voice_sessions": stats_data.get("voice_stats", {}).get("voice_sessions", 0),
-                "achievements": stats_data.get("achievements", {}).get("unlocked_count", 0),
-                "prestige": stats_data.get("prestige_level", 0)
-            }
-            logger.debug(f"{LOG_PREFIX} Processed stats: {user_stats}")
-        else:
-            logger.warning(f"{LOG_PREFIX} ❌ No stats data to process for profile card")
-
-        user_data = {
-            "nickname": nickname,
-            "avatar_url": str(avatar_url),
-            "join_date": join_date,
-            "stats": user_stats
-        }
-
-        logger.info(f"{LOG_PREFIX} User data compiled for {user.id}: nickname {nickname}, stats: {bool(user_stats)}")
-        return user_data
-
     # Member command group
-    member_group = app_commands.Group(name="member", description="Member profile and stats commands")
-
-    @member_group.command(name="card", description="Generate a member's profile card")
-    @app_commands.describe(
-        member="Member to view (defaults to you)",
-        layout="Card layout (overrides saved preference)",
-        show_inventory="Show inventory summary (overrides saved preference)",
-        show_badges="Show badges (overrides saved preference)",
-        public="Send as a public message"
-    )
-    @app_commands.choices(
-        layout=[app_commands.Choice(name="Detailed", value="detailed"),
-                app_commands.Choice(name="Compact", value="compact")]
-    )
-    async def member_card(
-            self,
-            interaction: discord.Interaction,
-            member: discord.Member = None,
-            layout: app_commands.Choice[str] | None = None,
-            show_inventory: bool | None = None,
-            show_badges: bool | None = None,
-            public: bool = False,
-    ):
-        """Generates and sends a member's profile card with saved preferences."""
-        start_time = _now()
-        user = member or interaction.user
-
-        logger.info(
-            f"{LOG_PREFIX} Profile card requested for user={user.id} ({user.display_name}) by requester={interaction.user.id}, public={public}")
-
-        await interaction.response.defer(ephemeral=not public)  # type: ignore
-
-        try:
-            user_id_str = str(user.id)
-            guild_id_str = str(interaction.guild.id)
-
-            logger.debug(f"{LOG_PREFIX} Starting parallel data fetch for profile card")
-            # Parallel fetch: user data and preferences
-            user_data_task = self._fetch_user_data(user, interaction.guild)
-            prefs_task = self.preferences.get_user_preferences(user_id_str, guild_id_str)
-
-            user_data, saved_prefs = await asyncio.gather(user_data_task, prefs_task)
-
-            logger.debug(f"{LOG_PREFIX} Data fetched, saved preferences: {saved_prefs}")
-
-            # Use command parameters or saved preferences
-            final_theme = saved_prefs["theme"]
-            final_layout = layout.value if layout else saved_prefs["layout"]
-            final_show_stats = saved_prefs.get("show_stats", True)  # Get show_stats preference
-            final_show_badges = show_badges if show_badges is not None else saved_prefs.get("show_badges", True)
-            final_show_inventory = show_inventory if show_inventory is not None else saved_prefs.get("show_inventory",
-                                                                                                     False)
-
-            logger.debug(
-                f"{LOG_PREFIX} Final settings: theme={final_theme}, layout={final_layout}, stats={final_show_stats}")
-
-            # Get theme palette
-            theme_palette = await self.preferences.get_theme_palette(final_theme, user_id_str, guild_id_str)
-
-            logger.debug(f"{LOG_PREFIX} Generating profile card image")
-            card_start = _now()
-            # Generate the card - PASS ALL PARAMETERS INCLUDING show_stats
-            image = await create_profile_card(
-                user_data=user_data,
-                theme_palette=theme_palette,
-                layout=final_layout,
-                show_stats=final_show_stats,  # ADD THIS
-                show_badges=final_show_badges,  # ADD THIS
-                show_inventory=final_show_inventory  # ADD THIS
-            )
-            card_time = _now() - card_start
-
-            logger.debug(f"{LOG_PREFIX} Preparing file buffer")
-            buffer = BytesIO()
-            image.save(buffer, format="PNG", optimize=True)
-            buffer.seek(0)
-            file = discord.File(buffer, filename=f"profile_card_{user.id}.png")
-
-            view = ProfileCardView(
-                user_data, theme_palette,
-                theme=final_theme,
-                layout=final_layout,
-                public=public,
-                preferences=self.preferences,
-                show_stats=final_show_stats,  # ADD THIS
-                show_badges=final_show_badges,  # ADD THIS
-                show_inventory=final_show_inventory  # ADD THIS
-            )
-
-            await interaction.followup.send(
-                content=(None if public else f"{user.mention}"),
-                file=file,
-                view=view,
-                ephemeral=not public
-            )
-
-            total_time = _now() - start_time
-            logger.info(
-                f"{LOG_PREFIX} Profile card generated and sent successfully in {_fmt(total_time)} (card generation: {_fmt(card_time)})")
-
-        except Exception as e:
-            total_time = _now() - start_time
-            logger.error(
-                f"{LOG_PREFIX} Profile card generation failed after {_fmt(total_time)} for user={user.id}: {e}",
-                exc_info=True)
-            try:
-                await interaction.followup.send(
-                    "⚠️ An error occurred while generating the profile card. Please try again later.",
-                    ephemeral=True
-                )
-            except Exception as resp_error:
-                logger.error(f"{LOG_PREFIX} Failed to send error response: {resp_error}")
-
-    @member_group.command(name="settings", description="Manage your profile card preferences")
-    async def member_settings(self, interaction: discord.Interaction):
-        """Show current profile settings and allow management."""
-        start_time = _now()
-        logger.info(f"{LOG_PREFIX} Settings requested by user={interaction.user.id}")
-
-        await interaction.response.defer(ephemeral=True) # type: ignore
-
-        try:
-            prefs = await self.preferences.get_user_preferences(
-                str(interaction.user.id), str(interaction.guild.id)
-            )
-
-            logger.debug(f"{LOG_PREFIX} Current preferences for user={interaction.user.id}: {prefs}")
-
-            embed = discord.Embed(
-                title="🎨 Profile Card Settings",
-                description="Your current profile card preferences:",
-                color=discord.Color.blue()
-            )
-            embed.add_field(name="Theme", value=prefs["theme"].title(), inline=True)
-            embed.add_field(name="Layout", value=prefs["layout"].title(), inline=True)
-
-            embed.set_footer(
-                text="Use /member card to generate your card with these settings, or use the buttons to modify your current card and save new preferences.")
-
-            await interaction.followup.send(embed=embed, ephemeral=True)
-
-            total_time = _now() - start_time
-            logger.info(f"{LOG_PREFIX} Settings displayed successfully in {_fmt(total_time)}")
-
-        except Exception as e:
-            total_time = _now() - start_time
-            logger.error(f"{LOG_PREFIX} Settings display failed after {_fmt(total_time)}: {e}", exc_info=True)
-            try:
-                await interaction.followup.send(
-                    "❌ Failed to load your profile settings. Please try again later.",
-                    ephemeral=True
-                )
-            except Exception as resp_error:
-                logger.error(f"{LOG_PREFIX} Failed to send error response: {resp_error}")
+    member_group = app_commands.Group(name="member", description="Member stats commands")
 
     @member_group.command(name="stats", description="View stats for yourself or another member")
     @app_commands.describe(member="Member to view (defaults to you)", public="Show publicly (default: off)")
