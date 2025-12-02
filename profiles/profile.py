@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-path = os.getenv("PATH")
+path = os.getenv("PATH_OF_IMAGE")
 logger = get_logger("Profile")
 
 class Profile(commands.Cog):
