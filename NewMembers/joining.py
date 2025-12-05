@@ -329,6 +329,70 @@ class GuildEventHandler:
         avatar_url = member.display_avatar.url if member.display_avatar else "https://cdn.discordapp.com/embed/avatars/0.png"
 
         if account_age.days < 90:
+            # Check if user is whitelisted before kicking
+            from Database.DatabaseManager import db_manager
+            try:
+                whitelist_collection = db_manager.get_collection_manager('serverdata_whitelist')
+                whitelist_entry = await whitelist_collection.find_one({
+                    'guild_id': guild.id,
+                    'user_id': member.id,
+                    'is_active': True
+                })
+
+                if whitelist_entry:
+                    # User is whitelisted - allow them to join and assign role
+                    self.logger.info(f"\n{s}Member {member} is whitelisted, bypassing age restriction (account age: {account_age.days} days)\n")
+
+                    # Assign whitelist role if not already assigned
+                    if not whitelist_entry.get('role_assigned', False):
+                        try:
+                            from NewMembers.admin.whitelist import WHITELIST_ROLE_NAME, WHITELIST_ROLE_COLOR
+                            role = discord.utils.get(guild.roles, name=WHITELIST_ROLE_NAME)
+                            if not role:
+                                # Create role if it doesn't exist
+                                role = await guild.create_role(
+                                    name=WHITELIST_ROLE_NAME,
+                                    color=WHITELIST_ROLE_COLOR,
+                                    reason="Whitelist role for new members with new accounts",
+                                    mentionable=False,
+                                    hoist=True
+                                )
+                            await member.add_roles(role, reason="Whitelisted new member")
+
+                            # Update database
+                            await whitelist_collection.update_one(
+                                {'guild_id': guild.id, 'user_id': member.id},
+                                {'$set': {
+                                    'role_assigned': True,
+                                    'role_assigned_at': datetime.now(timezone.utc),
+                                    'account_age_at_join': account_age.days
+                                }}
+                            )
+                            self.logger.info(f"\n{s}Assigned whitelist role to {member}\n")
+                        except Exception as role_error:
+                            self.logger.error(f"\n{s}Failed to assign whitelist role to {member}: {role_error}\n")
+
+                    # Continue with normal welcome flow (skip the kick)
+                    channel = member.guild.get_channel(WELCOME_CHANNEL_ID)
+                    if channel:
+                        try:
+                            # Update members cache for this guild
+                            await self.cache_manager.cache_members(member.guild)
+                            self.logger.info(f"\n{s}Member cache updated for {member.guild.name}\n")
+                        except Exception as e:
+                            self.logger.error(f"\n{s}Error updating member cache for {member.guild.name}: {e}\n")
+
+                        try:
+                            await asyncio.sleep(1.2)
+                            await self.send_welcome_message(member)
+                            self.logger.info(f"Interactive welcome message sent for whitelisted member {member}\n")
+                        except Exception as e:
+                            self.logger.error(f"Error sending welcome message: {e}\n")
+                    return  # Exit early, don't kick
+            except Exception as whitelist_error:
+                self.logger.error(f"\n{s}Error checking whitelist: {whitelist_error}\n", exc_info=True)
+                # Continue with normal flow if whitelist check fails
+
             # Account is too new — check if we can send DM with rate limiting
             can_dm, reason = await self.can_send_dm(member)
 
