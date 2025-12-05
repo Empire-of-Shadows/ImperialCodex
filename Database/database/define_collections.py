@@ -281,3 +281,24 @@ class DefineCollections:
                 IndexModel([('guild_id', 1), ('quality_stats.average_score', -1)])
             ]
         )
+
+        # Whitelist collections
+        self._collection_configs['serverdata_whitelist'] = CollectionConfig(
+            name='Whitelist',
+            database='Server-Data',
+            connection='secondary',
+            indexes=[
+                # Unique whitelist entry per guild and user
+                IndexModel([('guild_id', 1), ('user_id', 1)], unique=True, name='guild_user_unique'),
+                # Lookup by guild for listing
+                IndexModel([('guild_id', 1), ('added_at', -1)], name='guild_added_at'),
+                # Lookup by user ID for quick checks
+                IndexModel([('user_id', 1)], name='user_id_lookup'),
+                # Lookup by username (case-sensitive) for resolution
+                IndexModel([('guild_id', 1), ('username', 1)], name='guild_username_lookup'),
+                # Find active whitelisted users
+                IndexModel([('guild_id', 1), ('is_active', 1)], name='guild_active'),
+                # Track by who added them
+                IndexModel([('added_by', 1), ('added_at', -1)], name='added_by_time')
+            ]
+        )
